@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+      - db_data:/app/data  # THÊM volume để persist database
+      - ./backend/data:/app/data  # Thêm dòng này để sync database
+      - ./backend_vosk_vi:/app/data/models/vosk-vi:ro
+    environment:
+      - PYTHONPATH=/app
+      - PYTHONUNBUFFERED=1
+      - VOSK_MODEL_PATH=/app/data/models/vosk-vi
+    depends_on:
+      - db_init
+    restart: unless-stopped
+
+  db_init:
+    build: ./backend
+    command: python -c "
+      import sys; sys.path.append('/app'); 
+      from config.database import init_db; 
+      print('Initializing database...'); 
+      init_db(); 
+      print('Database initialized successfully')"
+    volumes:
+      - ./backend:/app
+      - db_data:/app/data  # THÊM volume để persist database
+    environment:
+      - PYTHONPATH=/app
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  db_data:  # THÊM named volume cho database persistence

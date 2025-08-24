@@ -1,0 +1,72 @@
+{
+  "DB_PATH": "/app/data/chatbot.db",
+  
+  "_comment_github": "=== GitHub Models Configuration ===",
+  "API_KEY": "your_github_token_here",
+  "BASE_URL": "https://models.github.ai/inference",
+  "MODEL": "openai/gpt-4o-mini",
+  
+  "_comment_ollama": "=== Ollama Configuration ===",
+  "OLLAMA_BASE_URL": "http://host.docker.internal:11434",
+  "OLLAMA_MODEL": "gemma3n:e4b",
+  "OLLAMA_MAX_TOKENS": 2000,
+  
+  "_comment_ai_settings": "=== AI Provider Settings ===",
+  "PREFERRED_AI_PROVIDER": "ollama",
+  "AUTO_FALLBACK": true,
+  
+  "_comment_common": "=== Common AI Settings ===",
+  "TEMPERATURE": 0.7,
+  "MAX_TOKENS": 1000,
+  "REQUEST_TIMEOUT": 60,
+  
+  "_comment_system": "=== System Configuration ===",
+  "TIMEZONE": "Asia/Ho_Chi_Minh",
+  "SYSTEM_PROMPT": "Bạn là một trợ lý ảo Bixby thông minh, thân thiện, dễ thương, giúp người dùng trả lời câu hỏi và giải quyết vấn đề. Bạn có khả năng tìm kiếm thông tin mới nhất từ internet khi cần thiết và có thể truy cập thông tin cá nhân để cá nhân hóa câu trả lời. Luôn xưng hô là 'Em' hoặc tên 'Bixby' và không sử dụng từ 'Bạn', Luôn trả lời bằng Tiếng việt.",
+  "TIME_FORMAT": "Bây giờ là {time} ở Việt Nam.",
+  "FALLBACK_MESSAGE": "Em là Bixby! Em đã nhận được tin nhắn: '{user_input}'. Hiện tại em chưa kết nối được với AI, nhưng em sẽ sớm có thể trò chuyện thông minh hơn!",
+  "ERROR_MESSAGE": "Em là Bixby! Xin lỗi, em gặp chút vấn đề kỹ thuật khi xử lý câu hỏi của anh. Em đã ghi nhận: '{user_input}' và sẽ cố gắng trả lời tốt hơn!",
+  
+  "_comment_security": "=== Security Settings ===",
+  "SENSITIVE_KEYS": ["API_KEY", "PASSWORD", "SECRET", "TOKEN"],
+  
+  "_comment_cors": "=== CORS Configuration ===",
+  "CORS_ORIGINS": ["*"],
+
+  "_comment_enhanced_features": "=== 🚀 ENHANCED FEATURES (NEW) ===",
+  
+  "_comment_search": "--- FREE REALTIME SEARCH (Wikipedia, DuckDuckGo, News) ---",
+  "ENABLE_REALTIME_SEARCH": true,
+  "SEARCH_LANGUAGE": "vi",
+  "MAX_SEARCH_RESULTS": 5,
+  "SEARCH_CACHE_TTL_MINUTES": 60,
+  "SEARCH_TIMEOUT_SECONDS": 10,
+  
+  "_comment_personal": "--- PERSONAL INFO API (Optional) ---",
+  "ENABLE_PERSONAL_INFO": false,
+  "PERSONAL_API_BASE_URL": "",
+  "PERSONAL_API_TOKEN": "",
+  "PERSONAL_API_TIMEOUT": 10,
+  "PERSONAL_INFO_CACHE_TTL": 30,
+  
+  "_comment_performance": "--- PERFORMANCE & CACHING ---",
+  "ENABLE_CACHING": true,
+  "CACHE_TTL_SECONDS": 3600,
+  "RATE_LIMIT_REQUESTS": 100,
+  "RATE_LIMIT_WINDOW": 60,
+  
+  "_comment_voice": "--- VOICE FEATURES ---",
+  "VOICE_ENABLED": true,
+  "DEFAULT_VOICE_LANGUAGE": "vi-VN",
+  
+  "_comment_logging": "--- LOGGING CONFIGURATION ---",
+  "LOG_LEVEL": "INFO",
+  "LOG_FILE": "",
+  
+  "_comment_notes": "=== 📝 NOTES ===",
+  "_note_1": "✅ ENABLE_REALTIME_SEARCH=true: Sử dụng FREE search (không cần API keys)",
+  "_note_2": "🔍 Search sources: Wikipedia, DuckDuckGo, VnExpress, Tuổi Trẻ, Google scraping",
+  "_note_3": "💡 Personal Info API: Chỉ cần nếu bạn có API riêng cho thông tin cá nhân",
+  "_note_4": "🎛️ Tất cả enhanced features có thể bật/tắt độc lập",
+  "_note_5": "🆓 Hoàn toàn miễn phí - chỉ cần Ollama/GitHub AI token!"
+}

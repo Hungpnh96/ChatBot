@@ -1,0 +1,51 @@
+# requirements.txt đã sửa (tương thích dependencies)
+
+# FastAPI and web framework
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+python-multipart==0.0.6
+
+# Database
+# sqlite3 is built-in with Python, no need to install
+
+# HTTP clients
+httpx==0.25.2
+requests==2.31.0
+beautifulsoup4>=4.12.0
+lxml>=4.9.3
+
+# HTML parsing
+html5lib>=1.1
+
+# URL encoding/decoding
+urllib3>=2.0.7
+
+# AI and LangChain - để pip tự resolve dependencies
+langchain
+langchain-openai
+langchain-community
+openai
+
+# Data validation
+pydantic
+
+# Utilities
+python-json-logger==2.0.7
+python-dotenv==1.0.0
+
+# Audio/Voice processing
+SpeechRecognition==3.10.0
+pydub==0.25.1
+pyttsx3==2.90
+vosk==0.3.45
+
+# Additional audio dependencies
+soundfile>=0.12.1
+
+# Development and testing
+pytest==7.4.3
+pytest-asyncio==0.21.1
+
+# Async support
+aiofiles>=23.0.0
+

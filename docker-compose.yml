@@ -1,0 +1,77 @@
+# docker-compose.yml - Final version với auto-setup
+services:
+  backend:
+    build: ./backend
+    container_name: chatbot_backend
+    ports:
+      - "8000:8000"
+      - "11434:11434"  # Ollama port
+    volumes:
+      - ./backend:/app
+      - chatbot_data:/app/data        # Persistent database
+      - ollama_models:/root/.ollama   # Persistent Ollama models  
+      - vosk_models:/app/data/models  # Persistent Vosk models
+      - ./logs:/app/logs              # Logs directory
+    environment:
+      - PYTHONPATH=/app
+      - PYTHONUNBUFFERED=1
+      
+      # Auto-setup configuration
+      - AUTO_SETUP_ENABLED=true
+      - DOWNLOAD_MODELS_ON_START=true
+      - INSTALL_OLLAMA=true
+      
+      # AI Configuration
+      - PREFERRED_AI_PROVIDER=ollama
+      - AUTO_FALLBACK=true
+      - OLLAMA_MODEL=gemma2:9b
+      - OLLAMA_BASE_URL=http://localhost:11434
+      
+      # Vosk Configuration
+      - VOSK_MODEL_PATH=/app/data/models/vosk-vi
+      - VOSK_LANGUAGE=vi
+      
+      # Fallback messages
+      - FALLBACK_MESSAGE=Em là Bixby! Em đã nhận được tin nhắn nhưng chưa thể trả lời thông minh. Vui lòng thử lại sau!
+    
+    restart: unless-stopped
+    
+    # Health check với thời gian dài hơn cho setup
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+      interval: 30s
+      timeout: 15s
+      retries: 5
+      start_period: 300s  # 5 minutes cho auto-setup
+    
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          memory: 6G
+          cpus: '3.0'
+        reservations:
+          memory: 2G
+          cpus: '1.0'
+
+  frontend:
+    build: ./frontend
+    container_name: chatbot_frontend
+    ports:
+      - "3000:80"
+    environment:
+      - REACT_APP_API_URL=http://localhost:8000
+      - REACT_APP_WS_URL=ws://localhost:8000
+    depends_on:
+      backend:
+        condition: service_started  # Không đợi healthy để tránh timeout
+    restart: unless-stopped
+
+# Persistent volumes
+volumes:
+  chatbot_data:
+    name: chatbot_data
+  ollama_models:
+    name: chatbot_ollama_models
+  vosk_models:
+    name: chatbot_vosk_models

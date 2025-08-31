@@ -142,7 +142,6 @@ class OllamaManager:
     def get_recommended_models(self) -> List[str]:
         """Lấy danh sách models khuyến nghị cho ChatBot"""
         return [
-            "gemma2:9b",      # Model mặc định, cân bằng tốt
             "llama3.1:8b",    # Model phổ biến, nhanh
             "qwen2.5:7b",     # Model tốt cho tiếng Việt
             "gemma2:2b",      # Model nhẹ cho server yếu
@@ -179,7 +178,7 @@ def load_config() -> Dict:
     # Fallback config
     return {
         "OLLAMA_BASE_URL": "http://localhost:11434",
-        "OLLAMA_MODEL": "gemma2:9b"
+        "OLLAMA_MODEL": "gemma2:2b"
     }
 
 def main():
@@ -189,7 +188,7 @@ def main():
     # Load configuration
     config = load_config()
     base_url = config.get("OLLAMA_BASE_URL", "http://localhost:11434")
-    target_model = config.get("OLLAMA_MODEL", "gemma2:9b")
+    target_model = config.get("OLLAMA_MODEL", "gemma2:2b")
     
     # Initialize manager
     manager = OllamaManager(base_url)

@@ -73,7 +73,7 @@ class ModelManager:
         # Default config
         return {
             "OLLAMA_BASE_URL": "http://localhost:11434",
-            "OLLAMA_MODEL": "gemma2:9b",
+            "OLLAMA_MODEL": "gemma2:2b",
             "VOSK_MODEL_PATH": "/app/data/models/vosk-vi",
             "PREFERRED_AI_PROVIDER": "ollama",
             "AUTO_DOWNLOAD_MODELS": True,

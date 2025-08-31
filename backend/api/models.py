@@ -161,7 +161,7 @@ async def get_recommended_models():
         recommended = {
             "ollama": [
                 {
-                    "name": "gemma2:9b",
+                    "name": "gemma2:2b",
                     "description": "Model mặc định, cân bằng tốt về performance và accuracy",
                     "size_mb": 5000,
                     "recommended_for": "General purpose, Vietnamese language"

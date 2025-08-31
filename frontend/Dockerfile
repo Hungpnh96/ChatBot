@@ -15,7 +15,10 @@ RUN ls -la node_modules/.bin/ | grep react-scripts || echo "react-scripts not fo
 # Copy toàn bộ source code
 COPY . .
 
-# Build app
+# Build app với environment variables
+ARG REACT_APP_API_URL
+ARG REACT_APP_WS_URL
+ARG NODE_ENV
 RUN npm run build
 
 # Serve phase - Sử dụng serve thay vì nginx

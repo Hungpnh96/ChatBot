@@ -33,21 +33,8 @@ COPY . .
 # Make setup script executable
 RUN chmod +x /app/auto_setup.py
 
-# Create smart startup script
-RUN cat > /app/smart_start.sh << 'EOF'
-#!/bin/bash
-set -e
-
-echo "🚀 Smart ChatBot Startup..."
-
-# Run auto setup
-python /app/auto_setup.py
-
-# Start application regardless of setup results
-echo "🎯 Starting FastAPI application..."
-exec uvicorn main:app --host 0.0.0.0 --port 8000 --reload
-EOF
-
+# Copy startup script
+COPY smart_start.sh /app/smart_start.sh
 RUN chmod +x /app/smart_start.sh
 
 # Expose ports

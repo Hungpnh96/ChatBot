@@ -23,6 +23,7 @@ services:
       - AUTO_SETUP_ENABLED=true
       - PREFERRED_AI_PROVIDER=ollama
       - OLLAMA_MODEL=gemma2:9b
+      - OLLAMA_HOST=0.0.0.0:11434
     # Resource limits
     deploy:
       resources:

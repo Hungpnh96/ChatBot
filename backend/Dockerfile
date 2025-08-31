@@ -168,13 +168,10 @@ class AutoSetup:
                 pass
             
             # Start Ollama server (bind to all interfaces)
-            env = os.environ.copy()
-            env['OLLAMA_HOST'] = '0.0.0.0:11434'
             subprocess.Popen(
                 ['ollama', 'serve'],
                 stdout=open('/app/logs/ollama.log', 'w'),
-                stderr=subprocess.STDOUT,
-                env=env
+                stderr=subprocess.STDOUT
             )
             
             # Wait for server to start

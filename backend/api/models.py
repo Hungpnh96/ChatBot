@@ -290,3 +290,5 @@ async def model_health_check():
             "data": {"status": "unhealthy"},
             "message": f"Model health check failed: {str(e)}"
         }
+
+

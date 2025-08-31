@@ -107,9 +107,9 @@ cache/
 # DOCKER & CONTAINERS
 # =============================
 # Docker override files
-docker-compose.override.yml
-docker-compose.local.yml
-docker-compose.prod.yml
+#docker-compose.override.yml
+#docker-compose.local.yml
+#docker-compose.prod.yml
 
 # Docker volumes data
 docker-data/
@@ -566,3 +566,4 @@ newrelic.ini
 # CUSTOM ADDITIONS
 # =============================
 # Add any project-specific ignores here
+nginx/

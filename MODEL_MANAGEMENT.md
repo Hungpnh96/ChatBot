@@ -395,3 +395,5 @@ docker-compose logs backend | grep -i validate
 ---
 
 **Note**: Hệ thống Model Management được thiết kế để hoạt động độc lập và có thể mở rộng. Tất cả models được quản lý tự động và có thể được monitor qua API hoặc CLI tools.
+
+

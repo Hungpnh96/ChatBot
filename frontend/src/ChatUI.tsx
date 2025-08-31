@@ -269,10 +269,8 @@ const ChatUI: React.FC = () => {
           started_at: new Date().toISOString(),
           message_count: 2
         });
+        await loadConversations();
       }
-      
-      // Always reload conversations to update order after new message
-      await loadConversations();
     } catch (e) {
       console.error('Error sending message:', e);
       setMessages(prev => [
@@ -407,8 +405,9 @@ const ChatUI: React.FC = () => {
 
         await playAudioBlob(result);
 
-        // Always reload conversations to update order after voice message
-        await loadConversations();
+        if (!currentConv && metadata.conversation_id) {
+          await loadConversations();
+        }
       } else {
         const response = result as any;
 
@@ -440,8 +439,9 @@ const ChatUI: React.FC = () => {
           }
         ]);
 
-        // Always reload conversations to update order after voice message
-        await loadConversations();
+        if (!currentConv && response.conversation_id) {
+          await loadConversations();
+        }
       }
     } catch (e) {
       console.error('Error in voice chat:', e);

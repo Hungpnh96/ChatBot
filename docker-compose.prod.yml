@@ -1,5 +1,4 @@
 # docker-compose.prod.yml - Production deployment với Ollama tích hợp
-version: '3.8'
 
 services:
   # ===== BACKEND SERVICE với Ollama =====
@@ -52,7 +51,6 @@ services:
           cpus: '4.0'
         reservations:
           memory: 4G
-          cpus: '2.0'
     
     # Logging
     logging:

@@ -383,18 +383,18 @@ class EnhancedAIService:
         return status_info
 
 # Singleton instance
-ai_service = EnhancedAIService()
+enhanced_ai_service = EnhancedAIService()
 
 # Helper functions để sử dụng trong các endpoints khác
 async def get_ai_response(message: str, **kwargs) -> Dict[str, Any]:
     """Helper function để generate AI response"""
-    return await ai_service.generate_response(message, **kwargs)
+    return await enhanced_ai_service.generate_response(message, **kwargs)
 
 def get_service_health() -> Dict[str, Any]:
     """Helper function để lấy service health"""
-    return ai_service.get_service_status()
+    return enhanced_ai_service.get_service_status()
 
 async def refresh_ai_providers():
     """Helper function để refresh tất cả providers"""
-    ai_service._initialize_providers()
-    ai_service._determine_active_provider()
+    enhanced_ai_service._initialize_providers()
+    enhanced_ai_service._determine_active_provider()

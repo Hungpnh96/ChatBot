@@ -1,0 +1,184 @@
+# docker-compose.prod.yml - Production deployment với Ollama tích hợp
+version: '3.8'
+
+services:
+  # ===== BACKEND SERVICE với Ollama =====
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+        - INSTALL_OLLAMA=true
+        - DEFAULT_MODEL=gemma2:9b
+    container_name: chatbot_backend
+    restart: unless-stopped
+    
+    # Environment variables
+    environment:
+      - NODE_ENV=production
+      - PYTHONPATH=/app
+      - OLLAMA_BASE_URL=http://localhost:11434
+      - OLLAMA_MODEL=gemma2:9b
+      - PREFERRED_AI_PROVIDER=ollama
+      - AUTO_FALLBACK=true
+      - DOWNLOAD_MODELS_ON_START=true
+      - HEALTH_CHECK_ENABLED=true
+    
+    # Ports
+    ports:
+      - "8000:8000"    # FastAPI
+      - "11434:11434"  # Ollama API
+    
+    # Volumes - Persistent storage
+    volumes:
+      - chatbot_data:/app/data           # Database và user data
+      - ollama_models:/root/.ollama      # Ollama models
+      - chatbot_logs:/app/logs           # Application logs
+      - ./backend/config.json:/app/config.json:ro  # Config read-only
+    
+    # Health check
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health && curl -f http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 15s
+      retries: 3
+      start_period: 120s  # Đợi lâu hơn cho Ollama download model
+    
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          memory: 8G      # Ollama cần nhiều RAM
+          cpus: '4.0'
+        reservations:
+          memory: 4G
+          cpus: '2.0'
+    
+    # Logging
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "3"
+    
+    # Networks
+    networks:
+      - chatbot_network
+
+  # ===== FRONTEND SERVICE =====
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - NODE_ENV=production
+        - REACT_APP_API_URL=http://localhost:8000
+    container_name: chatbot_frontend
+    restart: unless-stopped
+    
+    ports:
+      - "3000:3000"
+    
+    # Environment
+    environment:
+      - NODE_ENV=production
+      - REACT_APP_API_URL=http://backend:8000
+      - REACT_APP_WEBSOCKET_URL=ws://backend:8000
+    
+    # Dependencies
+    depends_on:
+      backend:
+        condition: service_healthy
+    
+    # Health check
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    
+    # Networks
+    networks:
+      - chatbot_network
+
+  # ===== NGINX REVERSE PROXY (Optional) =====
+  nginx:
+    image: nginx:alpine
+    container_name: chatbot_nginx
+    restart: unless-stopped
+    
+    ports:
+      - "80:80"
+      - "443:443"
+    
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - nginx_logs:/var/log/nginx
+    
+    depends_on:
+      - backend
+      - frontend
+    
+    networks:
+      - chatbot_network
+
+  # ===== MONITORING (Optional) =====
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: chatbot_portainer
+    restart: unless-stopped
+    
+    ports:
+      - "9000:9000"
+    
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer_data:/data
+    
+    networks:
+      - chatbot_network
+
+# ===== VOLUMES =====
+volumes:
+  # Backend data
+  chatbot_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./data
+  
+  # Ollama models - Persistent storage cho models
+  ollama_models:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./ollama_models
+  
+  # Logs
+  chatbot_logs:
+    driver: local
+  
+  nginx_logs:
+    driver: local
+    
+  portainer_data:
+    driver: local
+
+# ===== NETWORKS =====
+networks:
+  chatbot_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+# ===== EXTRA CONFIGS =====
+x-logging: &default-logging
+  driver: "json-file"
+  options:
+    max-size: "100m"
+    max-file: "3"

@@ -1,5 +1,6 @@
 // api.ts - Complete Enhanced API with Voice Chat Integration
-const API_BASE_URL = 'http://localhost:8000';
+declare const process: { env: { REACT_APP_API_URL?: string } };
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
 // ===== EXISTING INTERFACES =====
 export interface Message {

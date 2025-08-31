@@ -84,7 +84,7 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"⚠️ AI service init failed: {e}")
         try:
-            from services.enhanced_ai_service import ai_service as enhanced_ai
+            from services.enhanced_ai_service import enhanced_ai_service as enhanced_ai
             ai_service = enhanced_ai
             app_status['ai_available'] = True
             logger.info("✅ Enhanced AI service initialized")

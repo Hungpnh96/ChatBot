@@ -53,9 +53,7 @@ RUN mkdir -p /app/data/models /app/logs /app/temp
 # Create comprehensive setup script
 RUN cat > /app/auto_setup.py << 'EOF'
 #!/usr/bin/env python3
-"""
-Auto setup script - Tự động cài đặt tất cả dependencies
-"""
+# Auto setup script - Tự động cài đặt tất cả dependencies
 import os
 import sys
 import subprocess
@@ -169,11 +167,14 @@ class AutoSetup:
             except:
                 pass
             
-            # Start Ollama server
+            # Start Ollama server (bind to all interfaces)
+            env = os.environ.copy()
+            env['OLLAMA_HOST'] = '0.0.0.0:11434'
             subprocess.Popen(
                 ['ollama', 'serve'],
                 stdout=open('/app/logs/ollama.log', 'w'),
-                stderr=subprocess.STDOUT
+                stderr=subprocess.STDOUT,
+                env=env
             )
             
             # Wait for server to start

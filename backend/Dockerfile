@@ -24,14 +24,11 @@ RUN pip install --no-cache-dir \
     langchain-ollama \
     langchain-openai
 
-# Copy application code
-COPY . .
-
 # Create necessary directories
 RUN mkdir -p /app/data/models /app/logs /app/temp
 
-# Copy auto setup script
-COPY auto_setup.py /app/auto_setup.py
+# Copy application code (including auto_setup.py)
+COPY . .
 
 # Make setup script executable
 RUN chmod +x /app/auto_setup.py

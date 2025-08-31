@@ -8,6 +8,9 @@ RUN apt-get update && apt-get install -y \
     unzip \
     git \
     build-essential \
+    espeak \
+    espeak-ng \
+    ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
 # Set working directory

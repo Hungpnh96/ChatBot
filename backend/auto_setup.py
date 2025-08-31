@@ -137,7 +137,9 @@ class AutoSetup:
             logger.warning(f"⚠️ Failed to start Ollama server: {e}")
             return False
     
-    def download_ollama_model(self, model_name="gemma2:2b"):
+    def download_ollama_model(self, model_name=None):
+        if model_name is None:
+            model_name = os.getenv('OLLAMA_MODEL', 'gemma2:2b')
         """Download Ollama model"""
         logger.info(f"🤖 Checking Ollama model: {model_name}")
         

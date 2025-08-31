@@ -60,7 +60,7 @@ class Settings:
     
     @property
     def ollama_model(self) -> str:
-        return self.config.get('OLLAMA_MODEL', 'gemma2:9b')
+        return self.config.get('OLLAMA_MODEL', 'gemma2:2b')
     
     @property
     def ollama_max_tokens(self) -> Optional[int]:

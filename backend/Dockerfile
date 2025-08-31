@@ -89,26 +89,40 @@ class AutoSetup:
         config_file = self.base_dir / "config.json"
         config_example = self.base_dir / "config.json.example"
         
-        if not config_file.exists() and config_example.exists():
-            shutil.copy(config_example, config_file)
-            logger.info("✅ Created config.json from example")
-        elif config_file.exists():
-            logger.info("✅ Config file already exists")
-        else:
-            # Create minimal config
-            minimal_config = {
-                "DB_PATH": "/app/data/chatbot.db",
-                "PREFERRED_AI_PROVIDER": "github",
-                "AUTO_FALLBACK": True,
-                "TEMPERATURE": 0.7,
-                "MAX_TOKENS": 1000,
-                "SYSTEM_PROMPT": "Bạn là trợ lý ảo Bixby thân thiện, trả lời bằng tiếng Việt.",
-                "FALLBACK_MESSAGE": "Em là Bixby! Hiện tại em chưa kết nối được với AI, nhưng em vẫn có thể giúp anh!"
-            }
+        try:
+            if not config_file.exists() and config_example.exists():
+                shutil.copy(config_example, config_file)
+                logger.info("✅ Created config.json from example")
+            elif config_file.exists():
+                logger.info("✅ Config file already exists")
+            else:
+                # Create minimal config
+                minimal_config = {
+                    "DB_PATH": "/app/data/chatbot.db",
+                    "PREFERRED_AI_PROVIDER": "ollama",
+                    "AUTO_FALLBACK": True,
+                    "TEMPERATURE": 0.7,
+                    "MAX_TOKENS": 1000,
+                    "SYSTEM_PROMPT": "Bạn là trợ lý ảo Bixby thân thiện, trả lời bằng tiếng Việt.",
+                    "FALLBACK_MESSAGE": "Em là Bixby! Hiện tại em chưa kết nối được với AI, nhưng em vẫn có thể giúp anh!"
+                }
+                
+                with open(config_file, 'w', encoding='utf-8') as f:
+                    json.dump(minimal_config, f, indent=2, ensure_ascii=False)
+                logger.info("✅ Created minimal config.json")
             
-            with open(config_file, 'w', encoding='utf-8') as f:
-                json.dump(minimal_config, f, indent=2, ensure_ascii=False)
-            logger.info("✅ Created minimal config.json")
+            # Validate config file exists and is readable
+            if config_file.exists():
+                with open(config_file, 'r', encoding='utf-8') as f:
+                    json.load(f)  # Test JSON parsing
+                return True
+            else:
+                logger.error("❌ Config file not found after setup")
+                return False
+                
+        except Exception as e:
+            logger.error(f"❌ Config setup failed: {e}")
+            return False
     
     def install_ollama(self):
         """Install Ollama if not present"""

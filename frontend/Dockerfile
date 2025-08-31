@@ -18,14 +18,18 @@ COPY . .
 # Build app
 RUN npm run build
 
-# Serve phase
-FROM nginx:stable-alpine
+# Serve phase - Sử dụng serve thay vì nginx
+FROM node:20-alpine
 
-# Copy build vào NGINX
-COPY --from=build /app/build /usr/share/nginx/html
+# Cài đặt serve để serve static files
+RUN npm install -g serve
 
-# Copy nginx config nếu có
-# COPY nginx.conf /etc/nginx/nginx.conf
+# Copy build vào thư mục serve
+COPY --from=build /app/build /app/build
+
+WORKDIR /app
 
 EXPOSE 3000
-CMD ["nginx", "-g", "daemon off;"]
+
+# Serve React app
+CMD ["serve", "-s", "build", "-l", "3000"]

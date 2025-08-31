@@ -24,6 +24,7 @@ services:
       - PREFERRED_AI_PROVIDER=ollama
       - OLLAMA_MODEL=gemma2:2b
       - OLLAMA_HOST=0.0.0.0:11434
+      - API_BASE_URL=https://chat.hungpnh.dev
     # Resource limits
     deploy:
       resources:

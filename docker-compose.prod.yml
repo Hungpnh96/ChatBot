@@ -60,13 +60,18 @@ services:
           cpus: '1.0'
 
   frontend:
-    build: ./frontend
+    build: 
+      context: ./frontend
+      args:
+        - REACT_APP_API_URL=https://chat.hungpnh.dev      # Build-time environment
+        - REACT_APP_WS_URL=wss://chat.hungpnh.dev
+        - NODE_ENV=production
     container_name: chatbot_frontend_prod
     ports:
       - "3000:80"
     environment:
-      - REACT_APP_API_URL=https://chat.hungpnh.dev        # Production domain
-      - REACT_APP_WS_URL=wss://chat.hungpnh.dev           # Production WebSocket
+      - REACT_APP_API_URL=https://chat.hungpnh.dev        # Runtime environment
+      - REACT_APP_WS_URL=wss://chat.hungpnh.dev
     depends_on:
       backend:
         condition: service_started  # Không đợi healthy để tránh timeout

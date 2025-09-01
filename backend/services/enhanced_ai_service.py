@@ -1,5 +1,5 @@
 """
-Enhanced AI Service - Xử lý tách biệt AI provider và fallback
+Enhanced AI Service - Xử lý Ollama AI provider với fallback
 Đảm bảo service vẫn hoạt động khi AI không khả dụng
 """
 
@@ -9,14 +9,17 @@ from enum import Enum
 from typing import Optional, Dict, Any
 from datetime import datetime, timedelta
 import requests
+import re
 
 from config.settings import settings
+from services.weather_service import weather_service
+from services.news_service import news_service
 
 logger = logging.getLogger(__name__)
 
 class AIProvider(Enum):
-    GITHUB = "github"
-    OLLAMA = "ollama" 
+    OLLAMA_GEMMA3N = "ollama_gemma3n" 
+    OLLAMA_GEMMA2 = "ollama_gemma2"
     FALLBACK = "fallback"
 
 class AIServiceStatus(Enum):
@@ -28,8 +31,8 @@ class EnhancedAIService:
     """Enhanced AI Service với fallback và resilience patterns"""
     
     def __init__(self):
-        self.github_client = None
-        self.ollama_client = None
+        self.ollama_gemma3n_client = None
+        self.ollama_gemma2_client = None
         self.current_provider = AIProvider.FALLBACK
         self.provider_status = {}
         self.last_health_check = {}
@@ -47,71 +50,63 @@ class EnhancedAIService:
         """Khởi tạo tất cả AI providers"""
         logger.info("Initializing AI providers...")
         
-        # Initialize GitHub AI
-        self._initialize_github_client()
-        
-        # Initialize Ollama
-        self._initialize_ollama_client()
+        # Initialize Ollama clients
+        self._initialize_ollama_clients()
         
         # Update provider status
         self._update_provider_status()
     
-    def _initialize_github_client(self):
-        """Khởi tạo GitHub AI client"""
-        try:
-            if not settings.api_key:
-                logger.warning("GitHub API key not configured")
-                self.github_client = None
-                return
-                
-            # Import here để tránh lỗi nếu thư viện không có
-            from langchain_openai import ChatOpenAI
-            
-            self.github_client = ChatOpenAI(
-                api_key=settings.api_key,
-                base_url=settings.base_url,
-                model=settings.model,
-                temperature=settings.temperature,
-                max_tokens=settings.max_tokens,
-                request_timeout=settings.request_timeout
-            )
-            
-            logger.info("GitHub AI client initialized")
-            
-        except ImportError as e:
-            logger.error(f"Missing langchain_openai dependency: {e}")
-            self.github_client = None
-        except Exception as e:
-            logger.error(f"Error initializing GitHub AI client: {e}")
-            self.github_client = None
-    
-    def _initialize_ollama_client(self):
-        """Khởi tạo Ollama client"""
+    def _initialize_ollama_clients(self):
+        """Khởi tạo Ollama clients cho cả 2 models"""
         try:
             # Import here để tránh lỗi nếu thư viện không có
-            from langchain_ollama import Ollama
+            try:
+                from langchain_ollama import Ollama
+            except ImportError:
+                # Try alternative import for newer versions
+                from langchain_community.llms import Ollama
             
             # Kiểm tra Ollama server trước
             if not self._check_ollama_server():
                 logger.warning("Ollama server not available during initialization")
-                self.ollama_client = None
+                self.ollama_gemma3n_client = None
+                self.ollama_gemma2_client = None
                 return
             
-            self.ollama_client = Ollama(
-                model=settings.ollama_model,
-                base_url=settings.ollama_base_url,
-                temperature=settings.temperature,
-                num_predict=settings.ollama_max_tokens or settings.max_tokens
-            )
+            # Initialize Gemma3n client
+            try:
+                self.ollama_gemma3n_client = Ollama(
+                    model=settings.ollama_model,
+                    base_url=settings.ollama_base_url,
+                    temperature=settings.temperature,
+                    num_predict=settings.ollama_max_tokens or settings.max_tokens
+                )
+                logger.info(f"Ollama Gemma3n client initialized with model: {settings.ollama_model}")
+            except Exception as e:
+                logger.warning(f"Could not initialize Gemma3n client: {e}")
+                self.ollama_gemma3n_client = None
             
-            logger.info("Ollama client initialized")
+            # Initialize Gemma2 client
+            try:
+                self.ollama_gemma2_client = Ollama(
+                    model=settings.ollama_fallback_model,
+                    base_url=settings.ollama_base_url,
+                    temperature=settings.temperature,
+                    num_predict=settings.ollama_max_tokens or settings.max_tokens
+                )
+                logger.info(f"Ollama Gemma2 client initialized with model: {settings.ollama_fallback_model}")
+            except Exception as e:
+                logger.warning(f"Could not initialize Gemma2 client: {e}")
+                self.ollama_gemma2_client = None
             
         except ImportError as e:
             logger.error(f"Missing langchain_ollama dependency: {e}")
-            self.ollama_client = None
+            self.ollama_gemma3n_client = None
+            self.ollama_gemma2_client = None
         except Exception as e:
-            logger.error(f"Error initializing Ollama client: {e}")
-            self.ollama_client = None
+            logger.error(f"Error initializing Ollama clients: {e}")
+            self.ollama_gemma3n_client = None
+            self.ollama_gemma2_client = None
     
     def _check_ollama_server(self) -> bool:
         """Kiểm tra Ollama server có khả dụng không"""
@@ -129,29 +124,29 @@ class EnhancedAIService:
         """Cập nhật trạng thái của các providers"""
         current_time = datetime.now()
         
-        # Check GitHub
-        if self.github_client:
+        # Check Ollama Gemma3n
+        if self.ollama_gemma3n_client and self._check_ollama_server():
             try:
                 # Simple test call
-                test_response = self.github_client.invoke("test")
-                self.provider_status[AIProvider.GITHUB] = AIServiceStatus.HEALTHY
+                test_response = self.ollama_gemma3n_client.invoke("test")
+                self.provider_status[AIProvider.OLLAMA_GEMMA3N] = AIServiceStatus.HEALTHY
             except Exception as e:
-                logger.warning(f"GitHub AI health check failed: {e}")
-                self.provider_status[AIProvider.GITHUB] = AIServiceStatus.OFFLINE
+                logger.warning(f"Ollama Gemma3n health check failed: {e}")
+                self.provider_status[AIProvider.OLLAMA_GEMMA3N] = AIServiceStatus.OFFLINE
         else:
-            self.provider_status[AIProvider.GITHUB] = AIServiceStatus.OFFLINE
+            self.provider_status[AIProvider.OLLAMA_GEMMA3N] = AIServiceStatus.OFFLINE
         
-        # Check Ollama
-        if self.ollama_client and self._check_ollama_server():
+        # Check Ollama Gemma2
+        if self.ollama_gemma2_client and self._check_ollama_server():
             try:
                 # Simple test call
-                test_response = self.ollama_client.invoke("test")
-                self.provider_status[AIProvider.OLLAMA] = AIServiceStatus.HEALTHY
+                test_response = self.ollama_gemma2_client.invoke("test")
+                self.provider_status[AIProvider.OLLAMA_GEMMA2] = AIServiceStatus.HEALTHY
             except Exception as e:
-                logger.warning(f"Ollama health check failed: {e}")
-                self.provider_status[AIProvider.OLLAMA] = AIServiceStatus.OFFLINE
+                logger.warning(f"Ollama Gemma2 health check failed: {e}")
+                self.provider_status[AIProvider.OLLAMA_GEMMA2] = AIServiceStatus.OFFLINE
         else:
-            self.provider_status[AIProvider.OLLAMA] = AIServiceStatus.OFFLINE
+            self.provider_status[AIProvider.OLLAMA_GEMMA2] = AIServiceStatus.OFFLINE
         
         # Update last check time
         self.last_health_check = {
@@ -162,21 +157,16 @@ class EnhancedAIService:
     
     def _determine_active_provider(self):
         """Xác định provider đang active"""
-        preferred = getattr(settings, 'preferred_ai_provider', 'github').lower()
-        
-        # Kiểm tra preferred provider trước
-        if preferred == 'github' and self.is_provider_healthy(AIProvider.GITHUB):
-            self.current_provider = AIProvider.GITHUB
-        elif preferred == 'ollama' and self.is_provider_healthy(AIProvider.OLLAMA):
-            self.current_provider = AIProvider.OLLAMA
-        # Fallback logic
-        elif self.is_provider_healthy(AIProvider.GITHUB):
-            self.current_provider = AIProvider.GITHUB
-        elif self.is_provider_healthy(AIProvider.OLLAMA):
-            self.current_provider = AIProvider.OLLAMA
+        # Ưu tiên Gemma3n, fallback về Gemma2
+        if self.is_provider_healthy(AIProvider.OLLAMA_GEMMA3N):
+            self.current_provider = AIProvider.OLLAMA_GEMMA3N
+            logger.info("Using Ollama Gemma3n as primary provider")
+        elif self.is_provider_healthy(AIProvider.OLLAMA_GEMMA2):
+            self.current_provider = AIProvider.OLLAMA_GEMMA2
+            logger.info("Using Ollama Gemma2 as fallback provider")
         else:
             self.current_provider = AIProvider.FALLBACK
-            logger.warning("No AI providers available, using fallback mode")
+            logger.warning("No Ollama models available, using fallback mode")
         
         logger.info(f"Active AI provider: {self.current_provider.value}")
     
@@ -213,6 +203,73 @@ class EnhancedAIService:
                 "Em đã ghi nhận: '{user_input}' và sẽ cố gắng trả lời tốt hơn!")
         }
     
+    def _detect_intent(self, message: str) -> Dict[str, Any]:
+        """Phát hiện ý định của user message"""
+        message_lower = message.lower()
+        
+        # Weather intent
+        weather_keywords = ['thời tiết', 'nhiệt độ', 'mưa', 'nắng', 'gió', 'độ ẩm', 'nóng', 'lạnh']
+        if any(keyword in message_lower for keyword in weather_keywords):
+            # Extract city name
+            city_patterns = [
+                r'thời tiết (?:ở|tại) (.+?)(?:\s|$)',
+                r'nhiệt độ (?:ở|tại) (.+?)(?:\s|$)',
+                r'(.+?) (?:có|đang) (?:mưa|nắng|nóng|lạnh)'
+            ]
+            
+            city = None
+            for pattern in city_patterns:
+                match = re.search(pattern, message_lower)
+                if match:
+                    city = match.group(1).strip()
+                    break
+            
+            if not city:
+                city = "Hà Nội"  # Default city
+            
+            return {
+                'intent': 'weather',
+                'city': city,
+                'confidence': 0.8
+            }
+        
+        # News intent
+        news_keywords = ['tin tức', 'tin mới', 'báo chí', 'thời sự', 'tin nóng', 'tin hot']
+        if any(keyword in message_lower for keyword in news_keywords):
+            return {
+                'intent': 'news',
+                'query': message,
+                'confidence': 0.7
+            }
+        
+        # General chat
+        return {
+            'intent': 'general',
+            'confidence': 0.5
+        }
+    
+    async def _get_real_time_data(self, intent: Dict[str, Any]) -> Optional[str]:
+        """Lấy dữ liệu thời gian thực dựa trên intent"""
+        try:
+            if intent['intent'] == 'weather':
+                city = intent.get('city', 'Hà Nội')
+                weather_data = weather_service.get_weather(city)
+                return weather_service.format_weather_response(weather_data)
+            
+            elif intent['intent'] == 'news':
+                query = intent.get('query', '')
+                if 'tin tức' in query.lower() or 'tin mới' in query.lower():
+                    news_data = news_service.get_top_headlines()
+                else:
+                    news_data = news_service.search_news(query)
+                return news_service.format_news_response(news_data)
+            
+            return None
+            
+        except Exception as e:
+            logger.error(f"Error getting real-time data: {e}")
+            return None
+    
     def get_service_status(self) -> Dict[str, Any]:
         """Lấy trạng thái tổng quan của service"""
         healthy_providers = [
@@ -220,10 +277,8 @@ class EnhancedAIService:
             if status == AIServiceStatus.HEALTHY
         ]
         
-        if len(healthy_providers) >= 2:
+        if len(healthy_providers) >= 1:
             overall_status = AIServiceStatus.HEALTHY
-        elif len(healthy_providers) >= 1:
-            overall_status = AIServiceStatus.DEGRADED
         else:
             overall_status = AIServiceStatus.OFFLINE
         
@@ -241,77 +296,74 @@ class EnhancedAIService:
     
     async def generate_response(self, message: str, **kwargs) -> Dict[str, Any]:
         """
-        Generate AI response với fallback support
+        Generate AI response với fallback support và real-time data
         Service sẽ luôn trả về response, không bao giờ fail hoàn toàn
         """
         # Refresh health check nếu cần
         await self._refresh_health_check()
         
+        # Detect intent
+        intent = self._detect_intent(message)
+        
+        # Try to get real-time data first
+        real_time_data = None
+        if intent['confidence'] > 0.6:
+            real_time_data = await self._get_real_time_data(intent)
+        
         # Thử generate với current provider
         try:
-            if self.current_provider == AIProvider.GITHUB and self.github_client:
-                response = await self._generate_github_response(message, **kwargs)
-                return self._format_success_response(response, AIProvider.GITHUB)
-                
-            elif self.current_provider == AIProvider.OLLAMA and self.ollama_client:
-                response = await self._generate_ollama_response(message, **kwargs)
-                return self._format_success_response(response, AIProvider.OLLAMA)
+            if self.current_provider == AIProvider.OLLAMA_GEMMA3N and self.ollama_gemma3n_client:
+                response = await self._generate_ollama_response(message, real_time_data, self.ollama_gemma3n_client, **kwargs)
+                return self._format_success_response(response, AIProvider.OLLAMA_GEMMA3N)
+            elif self.current_provider == AIProvider.OLLAMA_GEMMA2 and self.ollama_gemma2_client:
+                response = await self._generate_ollama_response(message, real_time_data, self.ollama_gemma2_client, **kwargs)
+                return self._format_success_response(response, AIProvider.OLLAMA_GEMMA2)
                 
         except Exception as e:
             logger.error(f"Error with {self.current_provider.value}: {e}")
             
             # Nếu auto_fallback enabled, thử provider khác
             if self.fallback_enabled:
-                fallback_response = await self._try_fallback_providers(message, **kwargs)
+                fallback_response = await self._try_fallback_providers(message, real_time_data, **kwargs)
                 if fallback_response:
                     return fallback_response
         
         # Cuối cùng, sử dụng fallback message
-        return self._generate_fallback_response(message, **kwargs)
+        return self._generate_fallback_response(message, real_time_data, **kwargs)
     
-    async def _generate_github_response(self, message: str, **kwargs) -> str:
-        """Generate response từ GitHub AI"""
-        try:
-            # Add system prompt và context
-            full_prompt = self._build_full_prompt(message, **kwargs)
-            response = await asyncio.to_thread(self.github_client.invoke, full_prompt)
-            return response.content if hasattr(response, 'content') else str(response)
-        except Exception as e:
-            logger.error(f"GitHub AI generation failed: {e}")
-            raise
-    
-    async def _generate_ollama_response(self, message: str, **kwargs) -> str:
+    async def _generate_ollama_response(self, message: str, real_time_data: Optional[str] = None, client=None, **kwargs) -> str:
         """Generate response từ Ollama"""
         try:
-            full_prompt = self._build_full_prompt(message, **kwargs)
-            response = await asyncio.to_thread(self.ollama_client.invoke, full_prompt)
+            full_prompt = self._build_full_prompt(message, real_time_data, **kwargs)
+            response = await asyncio.to_thread(client.invoke, full_prompt)
             return response.content if hasattr(response, 'content') else str(response)
         except Exception as e:
             logger.error(f"Ollama generation failed: {e}")
             raise
     
-    async def _try_fallback_providers(self, message: str, **kwargs) -> Optional[Dict[str, Any]]:
+    async def _try_fallback_providers(self, message: str, real_time_data: Optional[str] = None, **kwargs) -> Optional[Dict[str, Any]]:
         """Thử các providers khác khi current provider fail"""
         providers_to_try = []
         
-        if self.current_provider != AIProvider.GITHUB and self.is_provider_healthy(AIProvider.GITHUB):
-            providers_to_try.append(AIProvider.GITHUB)
+        # Nếu đang dùng Gemma3n, thử Gemma2
+        if self.current_provider == AIProvider.OLLAMA_GEMMA3N and self.is_provider_healthy(AIProvider.OLLAMA_GEMMA2):
+            providers_to_try.append(AIProvider.OLLAMA_GEMMA2)
         
-        if self.current_provider != AIProvider.OLLAMA and self.is_provider_healthy(AIProvider.OLLAMA):
-            providers_to_try.append(AIProvider.OLLAMA)
+        # Nếu đang dùng Gemma2, thử Gemma3n
+        elif self.current_provider == AIProvider.OLLAMA_GEMMA2 and self.is_provider_healthy(AIProvider.OLLAMA_GEMMA3N):
+            providers_to_try.append(AIProvider.OLLAMA_GEMMA3N)
         
         for provider in providers_to_try:
             try:
                 logger.info(f"Trying fallback provider: {provider.value}")
                 
-                if provider == AIProvider.GITHUB and self.github_client:
-                    response = await self._generate_github_response(message, **kwargs)
-                    # Cập nhật current provider nếu thành công
+                if provider == AIProvider.OLLAMA_GEMMA3N and self.ollama_gemma3n_client:
+                    response = await self._generate_ollama_response(message, real_time_data, self.ollama_gemma3n_client, **kwargs)
                     self.current_provider = provider
                     return self._format_success_response(response, provider)
                 
-                elif provider == AIProvider.OLLAMA and self.ollama_client:
-                    response = await self._generate_ollama_response(message, **kwargs)
+                elif provider == AIProvider.OLLAMA_GEMMA2 and self.ollama_gemma2_client:
+                    response = await self._generate_ollama_response(message, real_time_data, self.ollama_gemma2_client, **kwargs)
                     self.current_provider = provider
                     return self._format_success_response(response, provider)
                     
@@ -321,7 +373,7 @@ class EnhancedAIService:
         
         return None
     
-    def _build_full_prompt(self, message: str, **kwargs) -> str:
+    def _build_full_prompt(self, message: str, real_time_data: Optional[str] = None, **kwargs) -> str:
         """Xây dựng full prompt với system message và context"""
         system_prompt = getattr(settings, 'system_prompt', '')
         time_format = getattr(settings, 'time_format', '')
@@ -333,9 +385,15 @@ class EnhancedAIService:
             tz = pytz.timezone(getattr(settings, 'timezone', 'Asia/Ho_Chi_Minh'))
             current_time = datetime.now(tz).strftime('%Y-%m-%d %H:%M:%S %Z')
             time_info = time_format.format(time=current_time)
-            full_prompt = f"{system_prompt}\n\n{time_info}\n\nUser: {message}"
+            full_prompt = f"{system_prompt}\n\n{time_info}"
         else:
-            full_prompt = f"{system_prompt}\n\nUser: {message}"
+            full_prompt = system_prompt
+        
+        # Add real-time data if available
+        if real_time_data:
+            full_prompt += f"\n\nDỮ LIỆU THỰC TẾ:\n{real_time_data}\n"
+        
+        full_prompt += f"\n\nUser: {message}"
         
         return full_prompt
     
@@ -349,13 +407,18 @@ class EnhancedAIService:
             'fallback_used': False
         }
     
-    def _generate_fallback_response(self, message: str, **kwargs) -> Dict[str, Any]:
+    def _generate_fallback_response(self, message: str, real_time_data: Optional[str] = None, **kwargs) -> Dict[str, Any]:
         """Generate fallback response khi tất cả AI providers fail"""
         logger.info("Using fallback response")
         
-        fallback_content = self.fallback_messages['default'].format(
-            user_input=message[:100] + "..." if len(message) > 100 else message
-        )
+        if real_time_data:
+            # Nếu có real-time data, sử dụng nó
+            fallback_content = real_time_data
+        else:
+            # Sử dụng fallback message
+            fallback_content = self.fallback_messages['default'].format(
+                user_input=message[:100] + "..." if len(message) > 100 else message
+            )
         
         return {
             'success': True,
@@ -375,9 +438,13 @@ class EnhancedAIService:
         # Thêm thông tin chi tiết
         status_info.update({
             'uptime': 'calculated_elsewhere',  # App sẽ tính
-            'github_configured': bool(self.github_client),
-            'ollama_configured': bool(self.ollama_client),
-            'ollama_server_reachable': self._check_ollama_server()
+            'ollama_gemma3n_configured': bool(self.ollama_gemma3n_client),
+            'ollama_gemma2_configured': bool(self.ollama_gemma2_client),
+            'ollama_server_reachable': self._check_ollama_server(),
+            'ollama_primary_model': settings.ollama_model,
+            'ollama_fallback_model': settings.ollama_fallback_model,
+            'weather_service_available': bool(weather_service.api_key),
+            'news_service_available': bool(news_service.api_key)
         })
         
         return status_info

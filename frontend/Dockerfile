@@ -32,7 +32,7 @@ COPY --from=build /app/build /app/build
 
 WORKDIR /app
 
-EXPOSE 3000
+EXPOSE 80
 
 # Serve React app
-CMD ["serve", "-s", "build", "-l", "3000"]
+CMD ["serve", "-s", "build", "-l", "80"]

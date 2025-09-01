@@ -1,8 +1,6 @@
 from fastapi import APIRouter
 from typing import Optional
 from models.schemas import MessageIn, ChatResponse, TestAIRequest, TestAIResponse, AIProviderRequest, AIProviderResponse
-# from services.chat_service import chat_service
-# from services.ai_service import ai_service
 from services.enhanced_ai_service import enhanced_ai_service as ai_service
 from services.enhanced_chat_service import enhanced_chat_service as chat_service
 
@@ -10,13 +8,14 @@ from services.enhanced_chat_service import enhanced_chat_service as chat_service
 router = APIRouter(prefix="/chat/api", tags=["chat"])
 
 @router.post("/chat", response_model=ChatResponse)
-def chat(msg: MessageIn):
+async def chat(msg: MessageIn):
     """
-    Enhanced chat endpoint với provider selection - BACKWARD COMPATIBLE
+    Enhanced chat endpoint với Ollama providers - BACKWARD COMPATIBLE
     
     Request body có thể là:
     - {"user": "message", "conversation_id": 1} - như cũ
-    - {"user": "message", "conversation_id": 1, "ai_provider": "ollama"} - mới
+    - {"user": "message", "conversation_id": 1, "ai_provider": "ollama_gemma3n"} - Gemma3n
+    - {"user": "message", "conversation_id": 1, "ai_provider": "ollama_gemma2"} - Gemma2
     """
     
     # Kiểm tra nếu có ai_provider trong request
@@ -32,7 +31,7 @@ def chat(msg: MessageIn):
             logger.warning(f"Could not switch to provider {msg.ai_provider}: {switch_result.get('message', 'Unknown error')}")
     
     # Process chat như bình thường
-    result = chat_service.process_chat(msg)
+    result = await chat_service.process_enhanced_chat(msg)
     
     # Restore provider nếu đã switch
     if hasattr(msg, 'ai_provider') and msg.ai_provider:

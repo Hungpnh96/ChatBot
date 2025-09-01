@@ -1,6 +1,10 @@
 # Use Python 3.11 slim image
 FROM python:3.11-slim
 
+# Build arguments
+ARG DEBIAN_FRONTEND=noninteractive
+ARG PIP_NO_CACHE_DIR=1
+
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
     curl \
@@ -11,21 +15,22 @@ RUN apt-get update && apt-get install -y \
     espeak \
     espeak-ng \
     ffmpeg \
-    && rm -rf /var/lib/apt/lists/*
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* \
+    && rm -rf /tmp/* /var/tmp/*
 
 # Set working directory
 WORKDIR /app
 
 # Copy requirements and install Python dependencies
-COPY requirements.txt .
+COPY requirements.prod.txt requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Install additional dependencies
 RUN pip install --no-cache-dir \
     vosk \
     pyttsx3 \
-    langchain-ollama \
-    langchain-openai
+    langchain-ollama
 
 # Create necessary directories
 RUN mkdir -p /app/data/models /app/logs /app/temp
@@ -36,8 +41,7 @@ COPY . .
 # Make setup script executable
 RUN chmod +x /app/auto_setup.py
 
-# Copy startup script
-COPY smart_start.sh /app/smart_start.sh
+# Make startup script executable
 RUN chmod +x /app/smart_start.sh
 
 # Expose ports
@@ -47,5 +51,5 @@ EXPOSE 8000 11434
 HEALTHCHECK --interval=30s --timeout=15s --start-period=180s --retries=5 \
     CMD curl -f http://localhost:8000/health || exit 1
 
-# Use smart startup
-CMD ["/app/smart_start.sh"]
+# Use shell script for startup
+CMD ["/bin/bash", "-c", "python /app/auto_setup.py && uvicorn main:app --host 0.0.0.0 --port 8000 --reload"]

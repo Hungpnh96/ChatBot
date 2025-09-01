@@ -396,7 +396,7 @@ export function audioToBase64(blob: Blob): Promise<string> {
 // ===== EXISTING API FUNCTIONS =====
 export async function healthCheck(): Promise<HealthCheckResponse> {
   try {
-    const res = await fetch(`${API_BASE_URL}/health`);
+    const res = await fetch(`${API_BASE_URL}/api/health`);
     await handleResponse(res);
     return await res.json();
   } catch (error) {
@@ -540,15 +540,26 @@ export async function getProviderInfo(): Promise<ProviderInfo> {
     const data = await res.json();
     
     // Extract provider info from models data
-    const ollama_available = data.data?.models_by_type?.ollama?.length > 0 || false;
-    const github_available = data.data?.models_by_type?.github?.length > 0 || false;
+    const ollama_models = data.data?.models_by_type?.ollama || [];
+    const github_models = data.data?.models_by_type?.github || [];
+    
+    const ollama_available = ollama_models.length > 0;
+    const github_available = github_models.length > 0;
     
     const ollama_model = ollama_available 
-      ? data.data.models_by_type.ollama[0]?.name 
+      ? ollama_models[0]?.name 
       : undefined;
     const github_model = github_available 
-      ? data.data.models_by_type.github[0]?.name 
+      ? github_models[0]?.name 
       : undefined;
+    
+    console.log('Provider info:', {
+      ollama_available,
+      github_available,
+      ollama_model,
+      github_model,
+      models_data: data.data?.models_by_type
+    });
     
     return {
       current_provider: ollama_available ? 'ollama' : github_available ? 'github' : 'unknown',
@@ -559,6 +570,21 @@ export async function getProviderInfo(): Promise<ProviderInfo> {
     };
   } catch (error) {
     console.error('Error fetching provider info:', error);
+    throw error;
+  }
+}
+
+export async function searchRealtimeInfo(query: string): Promise<any> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/search`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query })
+    });
+    await handleResponse(res);
+    return await res.json();
+  } catch (error) {
+    console.error('Error searching realtime info:', error);
     throw error;
   }
 }
@@ -665,22 +691,22 @@ export async function voiceChat(
 
 export async function getVoiceCapabilities(): Promise<VoiceCapabilities> {
   try {
-    const res = await fetch(`${API_BASE_URL}/voice/status`);
+    const res = await fetch(`${API_BASE_URL}/api/voice/capabilities`);
     await handleResponse(res);
     const data = await res.json();
     
     // Transform voice status to capabilities format
     const browserSupport = checkVoiceSupport();
     return {
-      speech_recognition_available: data.vosk_available || browserSupport.speechRecognition,
-      text_to_speech_available: data.tts_available || browserSupport.speechSynthesis,
-      supported_languages: ['vi-VN', 'en-US'],
-      available_voices: [],
-      offline_mode: data.vosk_available || false,
-      max_audio_size_mb: 10,
-      max_text_length: 1000,
-      supported_audio_formats: ['webm', 'wav', 'mp3'],
-      health_status: data.fallback_mode ? 'degraded' : 'healthy'
+      speech_recognition_available: data.speech_recognition_available || browserSupport.speechRecognition,
+      text_to_speech_available: data.text_to_speech_available || browserSupport.speechSynthesis,
+      supported_languages: data.supported_languages || ['vi-VN', 'en-US'],
+      available_voices: data.available_voices || [],
+      offline_mode: data.offline_mode || false,
+      max_audio_size_mb: data.max_audio_size_mb || 10,
+      max_text_length: data.max_text_length || 1000,
+      supported_audio_formats: data.supported_audio_formats || ['webm', 'wav', 'mp3'],
+      health_status: data.health_status || 'unknown'
     };
   } catch (error) {
     console.error('Error getting voice capabilities:', error);
@@ -850,6 +876,7 @@ export default {
   updateConversationTitle,
   deleteConversation,
   getProviderInfo,
+  searchRealtimeInfo,
   testAI,
   fetchStats,
 

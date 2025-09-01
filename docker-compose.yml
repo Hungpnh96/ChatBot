@@ -24,7 +24,8 @@ services:
       # AI Configuration
       - PREFERRED_AI_PROVIDER=ollama
       - AUTO_FALLBACK=true
-      - OLLAMA_MODEL=gemma2:9b
+      - OLLAMA_MODEL=gemma2:2b
+      - OLLAMA_FALLBACK_MODEL=gemma3n:e4b
       - OLLAMA_BASE_URL=http://localhost:11434
       
       # Vosk Configuration
@@ -33,26 +34,30 @@ services:
       
       # Fallback messages
       - FALLBACK_MESSAGE=Em là Bixby! Em đã nhận được tin nhắn nhưng chưa thể trả lời thông minh. Vui lòng thử lại sau!
+      
+      # API Keys (optional)
+      - OPENWEATHER_API_KEY=de71262eb92a1cc896fb96bcdb59a176
+      - NEWS_API_KEY=72c14418f02747fda2bcfa584da1cd92
     
     restart: unless-stopped
     
     # Health check với thời gian dài hơn cho setup
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/ || exit 1"]
       interval: 30s
       timeout: 15s
       retries: 5
       start_period: 300s  # 5 minutes cho auto-setup
     
-    # Resource limits
+    # Resource limits - Increased for stability
     deploy:
       resources:
         limits:
-          memory: 6G
-          cpus: '3.0'
+          memory: 8G
+          cpus: '4.0'
         reservations:
-          memory: 2G
-          cpus: '1.0'
+          memory: 3G
+          cpus: '1.5'
 
   frontend:
     build: ./frontend

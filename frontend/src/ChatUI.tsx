@@ -307,8 +307,9 @@ const ChatUI: React.FC = () => {
       return;
     }
 
-    if (!browserVoiceSupport.mediaRecorder) {
-      alert('Trình duyệt không hỗ trợ ghi âm.');
+    // Check voice capabilities from server first, then browser
+    if (!voiceCapabilities?.speech_recognition_available && !browserVoiceSupport.mediaRecorder) {
+      alert('Trình duyệt không hỗ trợ ghi âm hoặc voice service chưa sẵn sàng.');
       return;
     }
 
@@ -1205,10 +1206,12 @@ const ChatUI: React.FC = () => {
         {/* Input Area - ChatGPT Style */}
         <div
           style={{
-            padding: '16px 24px 24px 24px',
+            padding: '16px 24px 32px 24px', // Tăng padding bottom cho iOS
             borderTop: '1px solid #333',
             backgroundColor: '#1a1a1a',
-            boxShadow: '0 -2px 10px rgba(0, 0, 0, 0.3)'
+            boxShadow: '0 -2px 10px rgba(0, 0, 0, 0.3)',
+            // Thêm safe area cho iOS
+            paddingBottom: 'calc(32px + env(safe-area-inset-bottom, 0px))'
           }}
         >
           <div
@@ -1424,6 +1427,13 @@ const ChatUI: React.FC = () => {
         
         ::-webkit-scrollbar-thumb:hover {
           background: #666;
+        }
+
+        /* iOS Safe Area Support */
+        @supports (padding: max(0px)) {
+          .ios-safe-area {
+            padding-bottom: max(32px, env(safe-area-inset-bottom));
+          }
         }
       `}</style>
     </div>

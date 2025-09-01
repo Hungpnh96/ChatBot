@@ -94,16 +94,25 @@ async def lifespan(app: FastAPI):
             ai_service = FallbackAIService()
             app_status['ai_available'] = False
     
-    # Initialize Voice Service (Non-critical)
-    try:
-        from services.voice_service import VoiceService
-        voice_service = VoiceService()
-        app_status['voice_available'] = voice_service.is_available()
-        logger.info("✅ Voice service initialized")
-    except Exception as e:
-        logger.warning(f"⚠️ Voice service init failed: {e}")
-        voice_service = FallbackVoiceService()
-        app_status['voice_available'] = False
+    # Initialize Voice Service (Non-critical) - Temporarily disabled
+    logger.info("⚠️ Voice service temporarily disabled to ensure system stability")
+    voice_service = FallbackVoiceService()
+    app_status['voice_available'] = False
+    
+    # TODO: Re-enable voice service after fixing dependencies
+    # try:
+    #     from services.voice_service import VoiceService
+    #     voice_service = VoiceService()
+    #     app_status['voice_available'] = voice_service.is_available()
+    #     logger.info("✅ Voice service initialized")
+    # except ImportError as ie:
+    #     logger.warning(f"⚠️ Voice service dependencies missing: {ie}")
+    #     voice_service = FallbackVoiceService()
+    #     app_status['voice_available'] = False
+    # except Exception as e:
+    #     logger.warning(f"⚠️ Voice service init failed: {e}")
+    #     voice_service = FallbackVoiceService()
+    #     app_status['voice_available'] = False
     
     logger.info("🎉 Application startup completed")
     yield
@@ -180,7 +189,7 @@ app.add_middleware(
 )
 
 # Health check endpoint
-@app.get("/health")
+@app.get("/api/health")
 async def health_check():
     """Health check endpoint"""
     return {
@@ -194,8 +203,14 @@ async def health_check():
         'message': 'ChatBot is running'
     }
 
+# Legacy health endpoint for compatibility
+@app.get("/health")
+async def health_check_legacy():
+    """Legacy health check endpoint"""
+    return await health_check()
+
 # AI status endpoint
-@app.get("/ai/status")
+@app.get("/api/ai/status")
 async def ai_status():
     """AI service status"""
     if ai_service:
@@ -203,12 +218,105 @@ async def ai_status():
     return {'status': 'not_initialized'}
 
 # Voice status endpoint
-@app.get("/voice/status")
+@app.get("/api/voice/status")
 async def voice_status():
     """Voice service status"""
     if voice_service:
         return voice_service.get_status()
     return {'status': 'not_initialized'}
+
+# Voice capabilities endpoint
+@app.get("/api/voice/capabilities")
+async def voice_capabilities():
+    """Voice capabilities endpoint"""
+    try:
+        if voice_service and hasattr(voice_service, 'is_available') and voice_service.is_available():
+            capabilities = {
+                "speech_recognition_available": True,
+                "text_to_speech_available": hasattr(voice_service, 'tts_engine') and voice_service.tts_engine is not None,
+                "supported_languages": ["vi-VN", "en-US"],
+                "available_voices": [],
+                "offline_mode": True,
+                "max_audio_size_mb": 10,
+                "max_text_length": 1000,
+                "supported_audio_formats": ["webm", "wav", "mp3"],
+                "health_status": "healthy"
+            }
+            return capabilities
+        else:
+            return {
+                "speech_recognition_available": False,
+                "text_to_speech_available": False,
+                "supported_languages": [],
+                "available_voices": [],
+                "offline_mode": False,
+                "max_audio_size_mb": 0,
+                "max_text_length": 0,
+                "supported_audio_formats": [],
+                "health_status": "not_available"
+            }
+    except Exception as e:
+        logger.error(f"Error getting voice capabilities: {e}")
+        return {
+            "speech_recognition_available": False,
+            "text_to_speech_available": False,
+            "supported_languages": [],
+            "available_voices": [],
+            "offline_mode": False,
+            "max_audio_size_mb": 0,
+            "max_text_length": 0,
+            "supported_audio_formats": [],
+            "health_status": "error"
+        }
+
+# Models status endpoint
+@app.get("/models/status")
+async def models_status():
+    """Models status endpoint"""
+    try:
+        from services.model_manager import model_manager
+        status = model_manager.get_model_status()
+        return {
+            "success": True,
+            "data": status,
+            "message": "Model status retrieved successfully"
+        }
+    except Exception as e:
+        logger.error(f"Error getting model status: {e}")
+        return {
+            "success": False,
+            "error": str(e),
+            "message": "Failed to get model status"
+        }
+
+# Search endpoint for realtime information
+@app.post("/api/search")
+async def search_realtime_info(request: Dict[str, Any]):
+    """Search for realtime information"""
+    try:
+        query = request.get('query', '')
+        if not query:
+            raise HTTPException(status_code=400, detail="Query is required")
+        
+        from services.realtime_search_service import RealtimeSearchService
+        search_service = RealtimeSearchService()
+        
+        # Search for realtime information
+        search_result = await search_service.search_and_get_info(query)
+        
+        return {
+            "success": True,
+            "query": query,
+            "result": search_result,
+            "has_realtime_info": search_result is not None
+        }
+    except Exception as e:
+        logger.error(f"Search error: {e}")
+        return {
+            "success": False,
+            "error": str(e),
+            "query": query
+        }
 
 # Chat endpoint
 @app.post("/chat/message")
@@ -261,7 +369,15 @@ async def chat_message(request: Dict[str, Any]):
         
         # Generate AI response with history
         if ai_service:
-            response = ai_service.get_response_with_history(message, ai_history)
+            try:
+                # Try to use enhanced AI service method
+                response = await ai_service.generate_response(message)
+            except Exception as e:
+                logger.warning(f"Enhanced AI failed, using fallback: {e}")
+                response = {
+                    'content': "Em là Bixby! Em đã nhận được tin nhắn nhưng chưa thể trả lời thông minh. Vui lòng thử lại sau!",
+                    'fallback_used': True
+                }
         else:
             response = {
                 'content': "Em là Bixby! Em đã nhận được tin nhắn nhưng chưa thể trả lời thông minh. Vui lòng thử lại sau!",

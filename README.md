@@ -1,455 +1,411 @@
-# 🤖 Chatbot với Ollama & GitHub AI
+# 🤖 Bixby ChatBot
 
-Dự án Chatbot thông minh hỗ trợ đa AI provider với khả năng fallback và tự động khôi phục.
+Hệ thống ChatBot AI thông minh với khả năng chat text và voice, hỗ trợ tiếng Việt.
 
-## 📋 Tổng Quan
+## ✨ Tính năng chính
 
-### 🎯 Tính Năng Chính
-- **Đa AI Provider**: Hỗ trợ Ollama (local) và GitHub AI (cloud)
-- **Auto Fallback**: Tự động chuyển đổi khi một provider gặp sự cố
-- **Resilient Architecture**: Service vẫn hoạt động khi AI offline
-- **Voice Support**: Nhận diện giọng nói và text-to-speech
-- **Docker Ready**: Triển khai dễ dàng với Docker Compose
-- **Production Ready**: Monitoring, health checks, logging
+- 🤖 **AI Chat**: Ollama (Gemma2, Gemma3N) với fallback thông minh
+- 🎤 **Voice Chat**: Nhận diện giọng nói và chuyển đổi text-to-speech
+- 💬 **Conversation Management**: Quản lý lịch sử chat với database
+- 🌐 **Modern Web UI**: Dark theme, responsive design
+- 🐳 **Docker Deployment**: One-click deployment với auto-setup
+- 🔄 **Auto Fallback**: Tự động chuyển đổi giữa các AI provider
 
-### 🏗️ Kiến Trúc Hệ Thống
+## 🚀 Quick Start
 
-```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Frontend      │    │    Backend      │    │   AI Providers  │
-│   (React)       │◄──►│   (FastAPI)     │◄──►│                 │
-│                 │    │                 │    │  • Ollama       │
-│  • Chat UI      │    │  • API Routes   │    │  • GitHub AI    │
-│  • Voice UI     │    │  • AI Service   │    │  • Fallback     │
-│  • History      │    │  • Database     │    │                 │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-```
+### Cách 1: Docker (Khuyến nghị)
 
-### 🔄 Luồng Xử Lý
-
-```mermaid
-graph TD
-    A[User Input] --> B[FastAPI Backend]
-    B --> C{AI Service}
-    C --> D[Check Primary Provider]
-    D --> E{Provider Available?}
-    E -->|Yes| F[Generate Response]
-    E -->|No| G[Try Fallback Provider]
-    G --> H{Fallback Success?}
-    H -->|Yes| F
-    H -->|No| I[Use Fallback Message]
-    F --> J[Return Response]
-    I --> J
-    J --> K[Store in Database]
-    K --> L[Send to Frontend]
-```
-
-## 🚀 Cài Đặt Nhanh
-
-### Bước 1: Clone Repository
 ```bash
-git clone <your-repo-url>
-cd chatbot-project
+# Clone repository
+git clone <repository-url>
+cd ChatBot
+
+# Start với Docker Compose
+docker-compose up -d
+
+# Truy cập ứng dụng
+# Frontend: http://localhost:3000
+# Backend API: http://localhost:8000
+# API Docs: http://localhost:8000/docs
 ```
 
-### Bước 2: Cấu Hình
+### Cách 2: Development
+
 ```bash
-# Copy templates
-cp .env.example .env
-cp backend/config.json.example backend/config.json
+# Backend
+cd backend
+pip install -r requirements.txt
+python main.py
 
-# Chỉnh sửa cấu hình
-nano backend/config.json
+# Frontend (terminal mới)
+cd frontend
+npm install
+npm start
 ```
 
-### Bước 3: Khởi Động Development
-```bash
-# Development mode
-docker-compose up --build
+## 🏗️ Kiến trúc hệ thống
 
-# Hoặc production mode
-docker-compose -f docker-compose.prod.yml up -d
+```
+ChatBot/
+├── backend/               # FastAPI Python backend
+│   ├── api/              # REST API endpoints
+│   ├── services/         # AI, Voice, Database services
+│   ├── config/           # Configuration & database
+│   └── data/             # SQLite DB & models
+├── frontend/             # React TypeScript frontend
+│   ├── src/
+│   │   ├── components/   # UI components
+│   │   ├── hooks/        # Custom React hooks
+│   │   └── utils/        # Helper functions
+└── scripts/              # Deployment & utility scripts
 ```
 
-### Bước 4: Kiểm Tra
-- Frontend: http://localhost:3000
-- Backend API: http://localhost:8000
-- Ollama API: http://localhost:11434
-- Health Check: http://localhost:8000/health
+## 🔧 Configuration
 
-## ⚙️ Cấu Hình Chi Tiết
+### Docker Compose (docker-compose.yml)
 
-### 🔧 Backend Configuration (config.json)
+Hệ thống tự động cấu hình với các environment variables:
 
+```yaml
+environment:
+  # AI Configuration
+  - PREFERRED_AI_PROVIDER=ollama
+  - OLLAMA_MODEL=gemma2:2b
+  - OLLAMA_FALLBACK_MODEL=gemma3n:e4b
+  
+  # Voice Configuration
+  - VOSK_MODEL_PATH=/app/data/models/vosk-vi
+  - VOSK_LANGUAGE=vi
+  
+  # Auto Setup
+  - AUTO_SETUP_ENABLED=true
+  - DOWNLOAD_MODELS_ON_START=true
+```
+
+### Manual Configuration
+
+#### Backend (backend/config.json)
 ```json
 {
-  "DB_PATH": "/app/data/chatbot.db",
-  
-  "OLLAMA_BASE_URL": "http://localhost:11434",
-  "OLLAMA_MODEL": "gemma2:9b",
-  "OLLAMA_MAX_TOKENS": 2000,
-  
-  "API_KEY": "your_github_token_here",
-  "BASE_URL": "https://models.github.ai/inference",
-  "MODEL": "openai/gpt-4o-mini",
-  
-  "PREFERRED_AI_PROVIDER": "ollama",
-  "AUTO_FALLBACK": true,
-  
-  "TEMPERATURE": 0.7,
-  "MAX_TOKENS": 1000,
-  "REQUEST_TIMEOUT": 60,
-  
-  "SYSTEM_PROMPT": "Bạn là trợ lý ảo Bixby...",
-  "FALLBACK_MESSAGE": "Em là Bixby! Em đã nhận được tin nhắn...",
-  "ERROR_MESSAGE": "Em là Bixby! Xin lỗi, em gặp chút vấn đề..."
+  "ai": {
+    "preferred_provider": "ollama",
+    "ollama_model": "gemma2:2b",
+    "fallback_enabled": true
+  },
+  "voice": {
+    "vosk_model_path": "/app/data/models/vosk-vi",
+    "language": "vi-VN"
+  }
 }
 ```
 
-### 🐳 Docker Configuration
-
-#### Development
+#### Frontend (.env)
 ```bash
-# Khởi động với auto-reload
-docker-compose up --build
+REACT_APP_API_URL=http://localhost:8000
+REACT_APP_WS_URL=ws://localhost:8000
+```
 
-# Xem logs
+## 📡 API Endpoints
+
+### System Health
+- `GET /api/health` - System health check
+- `GET /models/status` - AI models status
+- `GET /api/voice/capabilities` - Voice service status
+
+### Chat Features
+- `POST /chat/message` - Send message to AI
+- `GET /chat/history` - Get conversation history
+- `POST /voice/transcribe` - Audio to text transcription
+
+### Conversation Management
+- `POST /api/conversations` - Create conversation
+- `PUT /api/conversations/{id}/title` - Update title
+- `DELETE /api/conversations/{id}` - Delete conversation
+
+## 🤖 AI Models
+
+### Ollama Models (Default)
+- **Gemma2 2B**: Fast, lightweight, good for basic chat
+- **Gemma3N E4B**: Advanced model, better understanding
+
+### Auto-Setup Features
+- Tự động download và cài đặt Ollama
+- Download AI models automatically
+- Setup Vosk Vietnamese model
+- Database initialization
+
+## 🎤 Voice Features
+
+### Speech Recognition
+- **Vosk**: Offline Vietnamese recognition
+- **Google Speech API**: Online fallback
+- **Browser SpeechRecognition**: Web API fallback
+
+### Text-to-Speech
+- **pyttsx3**: Server-side TTS
+- **Browser speechSynthesis**: Client-side TTS
+- Vietnamese voice support
+
+### Voice Settings
+- Language selection (vi-VN, en-US, ja-JP, ko-KR)
+- Speech speed control
+- Auto-speak responses
+- Voice-to-voice conversation
+
+## 🗄️ Database
+
+### SQLite Database
+- **conversations**: Chat sessions
+- **messages**: Individual messages với metadata
+- **Auto-backup**: Persistent volumes
+
+### Database Schema
+```sql
+-- Conversations
+CREATE TABLE conversations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    started_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Messages
+CREATE TABLE messages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    conversation_id INTEGER REFERENCES conversations(id),
+    sender TEXT NOT NULL,
+    content TEXT NOT NULL,
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+    ai_provider TEXT,
+    ai_model TEXT
+);
+```
+
+## 🎨 Frontend Features
+
+### Modern UI/UX
+- **Dark Theme**: Easy on the eyes
+- **Responsive Design**: Mobile, tablet, desktop
+- **Real-time Chat**: Instant AI responses
+- **Voice Controls**: One-click recording
+
+### Advanced Features
+- **Provider Selection**: Choose AI model
+- **Health Monitoring**: System status indicators
+- **Voice Diagnostics**: Audio quality checking
+- **Conversation Management**: Edit titles, delete chats
+
+## 🐳 Docker Deployment
+
+### Production Deployment
+
+```bash
+# Production build
+docker-compose -f docker-compose.prod.yml up -d
+
+# Scaling
+docker-compose up -d --scale backend=2
+
+# Monitoring
 docker-compose logs -f backend
-
-# Restart service
-docker-compose restart backend
-```
-
-#### Production
-```bash
-# Deploy production
-docker-compose -f docker-compose.prod.yml up -d
-
-# Scale services
-docker-compose -f docker-compose.prod.yml up -d --scale backend=2
-
-# Update without downtime
-docker-compose -f docker-compose.prod.yml up -d --no-deps backend
-```
-
-### 🤖 AI Provider Configuration
-
-#### Ollama Setup
-```bash
-# Manual Ollama install (nếu không dùng Docker)
-curl -fsSL https://ollama.ai/install.sh | sh
-
-# Khởi động Ollama
-ollama serve
-
-# Download models
-ollama pull gemma2:9b
-ollama pull llama3.1:8b
-ollama pull qwen2.5:7b
-
-# List models
-ollama list
-```
-
-#### GitHub AI Setup
-1. Tạo GitHub Personal Access Token
-2. Cấu hình trong `config.json`:
-   - `API_KEY`: Token của bạn
-   - `BASE_URL`: https://models.github.ai/inference
-   - `MODEL`: openai/gpt-4o-mini (hoặc model khác)
-
-## 📁 Cấu Trúc Thư Mục
-
-```
-chatbot-project/
-├── backend/                 # FastAPI Backend
-│   ├── main.py             # Entry point
-│   ├── config/             # Configuration
-│   │   ├── settings.py     # Settings loader
-│   │   └── database.py     # Database config
-│   ├── services/           # Business logic
-│   │   ├── ai_service.py   # AI service cơ bản
-│   │   ├── enhanced_ai_service.py  # AI service nâng cao
-│   │   ├── voice_service.py # Voice processing
-│   │   └── chat_service.py # Chat management
-│   ├── models/             # Database models
-│   ├── routes/             # API routes
-│   ├── scripts/            # Utility scripts
-│   │   ├── startup_with_ollama.sh  # Startup script
-│   │   ├── ollama_manager.py       # Ollama manager
-│   │   └── init_db.py             # Database init
-│   ├── data/               # Database files (git ignored)
-│   ├── logs/               # Log files (git ignored)
-│   ├── Dockerfile          # Docker image
-│   ├── requirements.txt    # Python dependencies
-│   ├── config.json.example # Config template
-│   └── config.json         # Real config (git ignored)
-│
-├── frontend/               # React Frontend
-│   ├── src/
-│   │   ├── components/     # React components
-│   │   ├── services/       # API services
-│   │   └── utils/          # Utilities
-│   ├── public/
-│   ├── Dockerfile
-│   ├── .env.example
-│   └── .env                # Real env (git ignored)
-│
-├── nginx/                  # Reverse proxy
-│   ├── nginx.conf
-│   └── ssl/               # SSL certificates
-│
-├── scripts/               # Project scripts
-│   ├── security_check.sh  # Security audit
-│   ├── backup.sh          # Database backup
-│   └── deploy.sh          # Deployment
-│
-├── docs/                  # Documentation
-├── docker-compose.yml     # Development
-├── docker-compose.prod.yml # Production
-├── .env.example           # Environment template
-├── .env                   # Real environment (git ignored)
-├── .gitignore
-└── README.md
-```
-
-## 🔧 Troubleshooting
-
-### ❌ Ollama Không Khởi Động
-```bash
-# Kiểm tra Ollama service
-docker-compose exec backend curl -f http://localhost:11434/api/tags
-
-# Xem logs
-docker-compose logs backend | grep ollama
-
-# Restart Ollama service
-docker-compose exec backend pkill ollama
-docker-compose exec backend /app/startup.sh
-```
-
-### ❌ Model Không Download
-```bash
-# Download manual
-docker-compose exec backend ollama pull gemma2:9b
-
-# Kiểm tra disk space
-docker-compose exec backend df -h
-
-# Kiểm tra network
-docker-compose exec backend ping -c 3 registry.ollama.ai
-```
-
-### ❌ AI Service Offline
-```bash
-# Health check
-curl http://localhost:8000/health
-
-# Check provider status
-curl http://localhost:8000/ai/status
-
-# Restart AI service
-docker-compose restart backend
-```
-
-### ❌ Database Lỗi
-```bash
-# Backup database
-docker-compose exec backend cp /app/data/chatbot.db /app/data/chatbot.db.backup
-
-# Reset database
-docker-compose exec backend python /app/scripts/init_db.py
-
-# Check database
-docker-compose exec backend sqlite3 /app/data/chatbot.db ".tables"
-```
-
-## 🚀 Production Deployment
-
-### 1. Chuẩn Bị Server
-```bash
-# Update system
-sudo apt update && sudo apt upgrade -y
-
-# Install Docker
-curl -fsSL https://get.docker.com -o get-docker.sh
-sudo sh get-docker.sh
-
-# Install Docker Compose
-sudo apt install docker-compose -y
-
-# Create project directory
-sudo mkdir -p /opt/chatbot
-sudo chown $USER:$USER /opt/chatbot
-```
-
-### 2. Deploy Application
-```bash
-# Clone project
-cd /opt/chatbot
-git clone <your-repo> .
-
-# Setup configuration
-cp .env.example .env
-cp backend/config.json.example backend/config.json
-
-# Edit configurations
-nano .env
-nano backend/config.json
-
-# Create required directories
-mkdir -p data logs ollama_models
-
-# Start services
-docker-compose -f docker-compose.prod.yml up -d
-
-# Check status
-docker-compose ps
-```
-
-### 3. SSL & Domain Setup
-```bash
-# Install Certbot
-sudo apt install certbot -y
-
-# Generate SSL certificate
-sudo certbot certonly --standalone -d your-domain.com
-
-# Copy certificates to nginx
-sudo cp /etc/letsencrypt/live/your-domain.com/* ./nginx/ssl/
-
-# Update nginx config
-# Edit nginx/nginx.conf với domain của bạn
-
-# Restart nginx
-docker-compose restart nginx
-```
-
-### 4. Monitoring Setup
-```bash
-# Install monitoring tools
-docker-compose exec backend pip install prometheus-client
-
-# Setup log rotation
-sudo logrotate -f /etc/logrotate.conf
-
-# Setup backup cron
-crontab -e
-# Add: 0 2 * * * /opt/chatbot/scripts/backup.sh
-```
-
-## 📊 Monitoring & Maintenance
-
-### Health Checks
-```bash
-# Service health
-curl http://localhost:8000/health
-
-# AI provider status
-curl http://localhost:8000/ai/status
-
-# Database status
-curl http://localhost:8000/db/health
-
-# System resources
 docker stats
 ```
 
-### Log Management
+### Resource Requirements
+- **Memory**: 3-8GB (depending on AI model)
+- **CPU**: 2-4 cores recommended
+- **Storage**: 10GB+ for models and database
+- **Network**: Internet for model downloads
+
+### Health Checks
 ```bash
-# View logs
-docker-compose logs -f backend
-docker-compose logs -f frontend
+# System health
+curl http://localhost:8000/api/health
 
-# Log rotation
-docker-compose exec backend logrotate /etc/logrotate.conf
+# Models status  
+curl http://localhost:8000/models/status
 
-# Clear old logs
-find ./logs -name "*.log" -mtime +7 -delete
+# Voice capabilities
+curl http://localhost:8000/api/voice/capabilities
 ```
 
-### Performance Tuning
+## 🔄 Development
+
+### Backend Development
 ```bash
-# Optimize Docker images
-docker system prune -a
-
-# Monitor memory usage
-docker exec backend free -h
-
-# Check disk usage
-docker exec backend df -h
-
-# Optimize database
-docker exec backend sqlite3 /app/data/chatbot.db "VACUUM;"
+cd backend
+python -m venv venv
+source venv/bin/activate  # Linux/Mac
+pip install -r requirements.txt
+uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-## 🔒 Security Guidelines
-
-### 🚨 Quan Trọng - KHÔNG BAO GIỜ COMMIT:
-- API keys, tokens, passwords
-- Database files (*.db, *.sqlite)
-- Log files (*.log)
-- Model files lớn (*.bin, *.model)
-- Các file .env thực tế
-
-### ✅ Best Practices:
-- Sử dụng .env.example templates
-- Giữ .env files trong .gitignore
-- Regular security audits
-- Update dependencies thường xuyên
-- Monitor logs for suspicious activity
-
-## 📞 Support & Troubleshooting
-
-### Common Issues:
-1. **Ollama không khởi động**: Kiểm tra RAM, disk space
-2. **Model không download**: Kiểm tra network, proxy settings
-3. **AI responses chậm**: Tối ưu model size, hardware
-4. **Database lỗi**: Backup và migrate
-5. **Docker build fail**: Clear cache, check dependencies
-
-### Debugging Steps:
+### Frontend Development
 ```bash
-# 1. Check overall status
-docker-compose ps
-
-# 2. View detailed logs
-docker-compose logs backend | tail -100
-
-# 3. Test components individually
-curl http://localhost:8000/health
-curl http://localhost:11434/api/tags
-
-# 4. Enter container for debugging
-docker-compose exec backend bash
-
-# 5. Check resource usage
-docker stats --no-stream
+cd frontend
+npm install
+npm start
+# Runs on http://localhost:3000
 ```
 
-### Getting Help:
-- Check logs đầu tiên: `docker-compose logs backend`
-- Verify configuration: `backend/config.json`
-- Test network connectivity: `curl` commands
-- Resource monitoring: `docker stats`
+### Testing
+```bash
+# Backend tests
+cd backend
+python -m pytest
+
+# Frontend tests
+cd frontend
+npm test
+
+# System integration test
+./scripts/test_system.sh
+```
+
+## 🐛 Troubleshooting
+
+### Common Issues
+
+#### 1. Backend không khởi động
+```bash
+# Check logs
+docker-compose logs backend
+
+# Common fixes
+docker-compose restart backend
+docker system prune  # Clear cache
+```
+
+#### 2. AI Model lỗi memory
+```bash
+# Use smaller model
+# In docker-compose.yml:
+OLLAMA_MODEL=gemma2:2b  # Instead of gemma3n:e4b
+
+# Increase memory limit
+deploy:
+  resources:
+    limits:
+      memory: 8G
+```
+
+#### 3. Voice không hoạt động
+```bash
+# Check browser permissions (microphone)
+# Verify HTTPS connection (required for getUserMedia)
+# Check voice service status:
+curl http://localhost:8000/api/voice/capabilities
+```
+
+#### 4. Database locked
+```bash
+# Stop containers
+docker-compose down
+
+# Remove database locks
+sudo rm -f ./backend/data/chatbot.db-wal
+sudo rm -f ./backend/data/chatbot.db-shm
+
+# Restart
+docker-compose up -d
+```
+
+### Debug Mode
+
+#### Enable debug logging
+```bash
+# Backend
+export LOG_LEVEL=DEBUG
+
+# Frontend
+localStorage.setItem('debug', 'true');
+```
+
+#### Health checks
+```bash
+# Test script
+./scripts/test_system.sh
+
+# Manual checks
+curl http://localhost:8000/api/health
+curl http://localhost:3000  # Should show React app
+```
+
+## 📈 Performance Tips
+
+### Resource Optimization
+1. **Use appropriate AI model**: gemma2:2b cho basic chat, gemma3n:e4b cho advanced
+2. **Limit conversation history**: Set max messages per conversation
+3. **Enable model caching**: Faster subsequent responses
+4. **Use SSD storage**: Better I/O for database operations
+
+### Scaling Options
+```bash
+# Horizontal scaling
+docker-compose up -d --scale backend=2
+
+# Load balancer (nginx)
+# Add nginx container to docker-compose.yml
+```
+
+## 🔒 Security
+
+### Data Protection
+- SQLite database với file permissions
+- No API keys trong code
+- Input validation on all endpoints
+- CORS configured cho frontend only
+
+### Privacy
+- Voice data processed locally khi có thể
+- No permanent audio storage
+- Conversation data stays on your server
+
+## 📚 Documentation
+
+### Detailed Documentation
+- [Backend README](./backend/README.md) - API, services, configuration
+- [Frontend README](./frontend/README.md) - UI components, state management
+- [Docker Documentation](./docker-compose.yml) - Deployment configuration
+
+### API Documentation
+- Swagger UI: http://localhost:8000/docs
+- ReDoc: http://localhost:8000/redoc
+
+## 🤝 Contributing
+
+### Development Setup
+1. Fork repository
+2. Create feature branch
+3. Make changes
+4. Test thoroughly
+5. Submit pull request
+
+### Code Style
+- **Backend**: Black formatting, type hints
+- **Frontend**: Prettier, TypeScript strict mode
+- **Commits**: Conventional commits format
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## 🙏 Acknowledgments
+
+- **Ollama**: Local AI model serving
+- **Vosk**: Offline speech recognition
+- **React**: Modern frontend framework
+- **FastAPI**: High-performance Python API framework
+- **Docker**: Containerization platform
 
 ---
 
-## 🎉 Chúc Mừng!
+## 🆘 Support
 
-Bây giờ bạn đã có một Chatbot hoàn chỉnh với:
-- ✅ Auto Ollama setup
-- ✅ Fallback mechanism
-- ✅ Production-ready deployment
-- ✅ Monitoring & health checks
-- ✅ Voice support
-- ✅ Database persistence
+Nếu bạn gặp vấn đề:
 
-**Next Steps:**
-1. Customize system prompts
-2. Add more AI models
-3. Implement user authentication
-4. Add analytics dashboard
-5. Setup CI/CD pipeline
+1. **Check logs**: `docker-compose logs backend`
+2. **Run health check**: `curl http://localhost:8000/api/health`
+3. **Restart services**: `docker-compose restart`
+4. **Clear cache**: `docker system prune -a`
 
-Happy Chatting! 🤖✨
+**System Requirements**: 4GB+ RAM, 10GB+ storage, modern browser with microphone support.

@@ -9,7 +9,7 @@ from zoneinfo import ZoneInfo
 logger = logging.getLogger(__name__)
 
 class Settings:
-    """Quản lý tất cả cấu hình của ứng dụng với hỗ trợ multiple AI providers + Enhanced Features"""
+    """Quản lý tất cả cấu hình của ứng dụng với hỗ trợ Ollama AI + Enhanced Features"""
     
     def __init__(self):
         self.config: Dict[str, Any] = {}
@@ -40,19 +40,6 @@ class Settings:
     def db_path(self) -> str:
         return self.config.get('DB_PATH', 'chatbot.db')
     
-    # GitHub AI Settings
-    @property
-    def api_key(self) -> Optional[str]:
-        return self.config.get('API_KEY')
-    
-    @property
-    def base_url(self) -> str:
-        return self.config.get('BASE_URL', 'https://models.github.ai/inference')
-    
-    @property
-    def model(self) -> str:
-        return self.config.get('MODEL', 'openai/gpt-4o-mini')
-    
     # Ollama Settings
     @property
     def ollama_base_url(self) -> str:
@@ -60,17 +47,21 @@ class Settings:
     
     @property
     def ollama_model(self) -> str:
-        return self.config.get('OLLAMA_MODEL', 'gemma2:2b')
+        return self.config.get('OLLAMA_MODEL', 'gemma3n:e4b')
+    
+    @property
+    def ollama_fallback_model(self) -> str:
+        return self.config.get('OLLAMA_FALLBACK_MODEL', 'gemma2:2b')
     
     @property
     def ollama_max_tokens(self) -> Optional[int]:
-        return self.config.get('OLLAMA_MAX_TOKENS')
+        return self.config.get('OLLAMA_MAX_TOKENS', 2000)
     
     # AI Provider Settings
     @property
     def preferred_ai_provider(self) -> str:
-        """Provider ưu tiên: 'github', 'ollama'"""
-        return self.config.get('PREFERRED_AI_PROVIDER', 'github').lower()
+        """Provider ưu tiên: chỉ 'ollama'"""
+        return 'ollama'
     
     @property
     def auto_fallback(self) -> bool:
@@ -84,7 +75,7 @@ class Settings:
     
     @property
     def max_tokens(self) -> int:
-        return self.config.get('MAX_TOKENS', 1000)
+        return self.config.get('MAX_TOKENS', 2000)
     
     @property
     def request_timeout(self) -> int:
@@ -123,9 +114,19 @@ class Settings:
     def cors_origins(self) -> list:
         return self.config.get('CORS_ORIGINS', ["*"])
     
-    # === NEW ENHANCED FEATURES SETTINGS ===
+    # === API KEYS SETTINGS ===
     
-    # === REALTIME SEARCH SETTINGS (FREE) ===
+    @property
+    def openweather_api_key(self) -> Optional[str]:
+        """API key cho OpenWeatherMap"""
+        return os.getenv('OPENWEATHER_API_KEY') or self.config.get('OPENWEATHER_API_KEY')
+    
+    @property
+    def news_api_key(self) -> Optional[str]:
+        """API key cho NewsAPI"""
+        return os.getenv('NEWS_API_KEY') or self.config.get('NEWS_API_KEY')
+    
+    # === NEW ENHANCED FEATURES SETTINGS ===
     @property
     def enable_realtime_search(self) -> bool:
         """Bật/tắt tìm kiếm thời gian thực (FREE)"""
@@ -256,11 +257,6 @@ class Settings:
     def get_ai_providers_config(self) -> Dict[str, Any]:
         """Lấy thông tin config của các AI providers"""
         return {
-            "github": {
-                "base_url": self.base_url,
-                "model": self.model,
-                "api_key_configured": bool(self.api_key)
-            },
             "ollama": {
                 "base_url": self.ollama_base_url,
                 "model": self.ollama_model,
@@ -302,7 +298,6 @@ class Settings:
         """Lấy status của tất cả features"""
         return {
             "core_features": {
-                "github_ai": bool(self.api_key),
                 "ollama_ai": True,  # Assume available
                 "voice_chat": self.voice_enabled,
                 "conversation_management": True,
@@ -325,9 +320,6 @@ class Settings:
         warnings = []
         
         # Core validations
-        if not self.api_key:
-            warnings.append("⚠️  GitHub API_KEY not configured - GitHub AI unavailable")
-        
         if not os.path.exists(os.path.dirname(self.db_path)):
             warnings.append(f"⚠️  Database directory does not exist: {os.path.dirname(self.db_path)}")
         
@@ -362,14 +354,6 @@ class Settings:
         logger.info(f"  - Database: {self.db_path}")
         logger.info(f"  - Preferred AI Provider: {self.preferred_ai_provider}")
         logger.info(f"  - Auto Fallback: {self.auto_fallback}")
-        
-        # GitHub Config
-        logger.info(f"  - GitHub Model: {self.model}")
-        logger.info(f"  - GitHub Base URL: {self.base_url}")
-        if not self.api_key:
-            logger.warning("  - GitHub API_KEY not found in config.json!")
-        else:
-            logger.info("  - GitHub API_KEY found in config")
         
         # Ollama Config  
         logger.info(f"  - Ollama Model: {self.ollama_model}")

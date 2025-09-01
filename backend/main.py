@@ -270,7 +270,7 @@ async def voice_capabilities():
         }
 
 # Models status endpoint
-@app.get("/models/status")
+@app.get("/api/models/status")
 async def models_status():
     """Models status endpoint"""
     try:
@@ -287,6 +287,102 @@ async def models_status():
             "success": False,
             "error": str(e),
             "message": "Failed to get model status"
+        }
+
+# Legacy endpoint for backward compatibility
+@app.get("/models/status")
+async def models_status_legacy():
+    """Legacy models status endpoint - redirects to /api/models/status"""
+    return await models_status()
+
+# Ollama service status endpoint
+@app.get("/api/ollama/status")
+async def ollama_status():
+    """Ollama service status endpoint"""
+    try:
+        import subprocess
+        import json
+        from datetime import datetime
+        
+        # Check if Ollama is running
+        try:
+            # Try to list models
+            result = subprocess.run(
+                ["ollama", "list"], 
+                capture_output=True, 
+                text=True, 
+                timeout=10
+            )
+            
+            if result.returncode == 0:
+                # Parse ollama list output
+                lines = result.stdout.strip().split('\n')[1:]  # Skip header
+                models = []
+                
+                for line in lines:
+                    if line.strip():
+                        parts = line.split()
+                        if len(parts) >= 4:
+                            models.append({
+                                "name": parts[0],
+                                "size": parts[2],
+                                "modified": parts[3] + " " + parts[4] if len(parts) > 4 else parts[3]
+                            })
+                
+                return {
+                    "success": True,
+                    "server_status": "running",
+                    "models": models,
+                    "timestamp": datetime.now().isoformat(),
+                    "message": "Ollama service is running"
+                }
+            else:
+                return {
+                    "success": False,
+                    "server_status": "stopped",
+                    "models": [],
+                    "error": result.stderr,
+                    "timestamp": datetime.now().isoformat(),
+                    "message": "Ollama service is not responding"
+                }
+                
+        except subprocess.TimeoutExpired:
+            return {
+                "success": False,
+                "server_status": "error",
+                "models": [],
+                "error": "Ollama command timeout",
+                "timestamp": datetime.now().isoformat(),
+                "message": "Ollama command timed out"
+            }
+        except FileNotFoundError:
+            return {
+                "success": False,
+                "server_status": "error",
+                "models": [],
+                "error": "Ollama not installed",
+                "timestamp": datetime.now().isoformat(),
+                "message": "Ollama is not installed"
+            }
+        except Exception as e:
+            return {
+                "success": False,
+                "server_status": "error",
+                "models": [],
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+                "message": f"Error checking Ollama status: {str(e)}"
+            }
+            
+    except Exception as e:
+        logger.error(f"Error in ollama status endpoint: {e}")
+        return {
+            "success": False,
+            "server_status": "error",
+            "models": [],
+            "error": str(e),
+            "timestamp": datetime.now().isoformat(),
+            "message": "Failed to get Ollama status"
         }
 
 # Search endpoint for realtime information
@@ -440,7 +536,7 @@ async def chat_message(request: Dict[str, Any]):
         }
 
 # Chat history endpoint
-@app.get("/chat/history")
+@app.get("/api/chat/history")
 async def get_chat_history(limit: int = 50):
     """Lấy lịch sử chat"""
     if not app_status['database_available']:
@@ -510,6 +606,12 @@ async def get_chat_history(limit: int = 50):
             'error': str(e),
             'history': []
         }
+
+# Legacy chat history endpoint for backward compatibility
+@app.get("/chat/history")
+async def get_chat_history_legacy(limit: int = 50):
+    """Legacy chat history endpoint - redirects to /api/chat/history"""
+    return await get_chat_history(limit)
 
 # Conversation management endpoints
 @app.post("/api/conversations")

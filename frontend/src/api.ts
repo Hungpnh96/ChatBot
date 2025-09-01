@@ -407,7 +407,7 @@ export async function healthCheck(): Promise<HealthCheckResponse> {
 
 export async function fetchConversations(): Promise<Conversation[]> {
   try {
-    const res = await fetch(`${API_BASE_URL}/chat/history`);
+    const res = await fetch(`${API_BASE_URL}/api/chat/history`);
     await handleResponse(res);
     const data = await res.json();
     
@@ -431,7 +431,7 @@ export async function fetchConversations(): Promise<Conversation[]> {
 
 export async function fetchMessages(conversationId: number): Promise<Message[]> {
   try {
-    const res = await fetch(`${API_BASE_URL}/chat/history`);
+    const res = await fetch(`${API_BASE_URL}/api/chat/history`);
     await handleResponse(res);
     const data = await res.json();
     const conversation = data.history?.find((conv: any) => conv.id === conversationId);
@@ -535,7 +535,7 @@ export async function deleteConversation(conversationId: number): Promise<void> 
 
 export async function getProviderInfo(): Promise<ProviderInfo> {
   try {
-    const res = await fetch(`${API_BASE_URL}/models/status`);
+    const res = await fetch(`${API_BASE_URL}/api/models/status`);
     await handleResponse(res);
     const data = await res.json();
     

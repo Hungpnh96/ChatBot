@@ -73,18 +73,9 @@ class EnhancedAIService:
                 self.ollama_gemma2_client = None
                 return
             
-            # Initialize Gemma3n client
-            try:
-                self.ollama_gemma3n_client = Ollama(
-                    model=settings.ollama_model,
-                    base_url=settings.ollama_base_url,
-                    temperature=settings.temperature,
-                    num_predict=settings.ollama_max_tokens or settings.max_tokens
-                )
-                logger.info(f"Ollama Gemma3n client initialized with model: {settings.ollama_model}")
-            except Exception as e:
-                logger.warning(f"Could not initialize Gemma3n client: {e}")
-                self.ollama_gemma3n_client = None
+            # Initialize Gemma3n client - Disabled
+            self.ollama_gemma3n_client = None
+            logger.info("Ollama Gemma3n client disabled - using only Gemma2")
             
             # Initialize Gemma2 client
             try:
@@ -124,17 +115,8 @@ class EnhancedAIService:
         """Cập nhật trạng thái của các providers"""
         current_time = datetime.now()
         
-        # Check Ollama Gemma3n
-        if self.ollama_gemma3n_client and self._check_ollama_server():
-            try:
-                # Simple test call
-                test_response = self.ollama_gemma3n_client.invoke("test")
-                self.provider_status[AIProvider.OLLAMA_GEMMA3N] = AIServiceStatus.HEALTHY
-            except Exception as e:
-                logger.warning(f"Ollama Gemma3n health check failed: {e}")
-                self.provider_status[AIProvider.OLLAMA_GEMMA3N] = AIServiceStatus.OFFLINE
-        else:
-            self.provider_status[AIProvider.OLLAMA_GEMMA3N] = AIServiceStatus.OFFLINE
+        # Check Ollama Gemma3n - Disabled
+        self.provider_status[AIProvider.OLLAMA_GEMMA3N] = AIServiceStatus.OFFLINE
         
         # Check Ollama Gemma2
         if self.ollama_gemma2_client and self._check_ollama_server():
@@ -157,13 +139,10 @@ class EnhancedAIService:
     
     def _determine_active_provider(self):
         """Xác định provider đang active"""
-        # Ưu tiên Gemma3n, fallback về Gemma2
-        if self.is_provider_healthy(AIProvider.OLLAMA_GEMMA3N):
-            self.current_provider = AIProvider.OLLAMA_GEMMA3N
-            logger.info("Using Ollama Gemma3n as primary provider")
-        elif self.is_provider_healthy(AIProvider.OLLAMA_GEMMA2):
+        # Use Gemma2 as primary provider (Gemma3n disabled)
+        if self.is_provider_healthy(AIProvider.OLLAMA_GEMMA2):
             self.current_provider = AIProvider.OLLAMA_GEMMA2
-            logger.info("Using Ollama Gemma2 as fallback provider")
+            logger.info("Using Ollama Gemma2 as primary provider")
         else:
             self.current_provider = AIProvider.FALLBACK
             logger.warning("No Ollama models available, using fallback mode")
